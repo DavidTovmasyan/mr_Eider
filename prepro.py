@@ -247,8 +247,12 @@ def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, s
     pos, neg = 0, 0
 
     tmp_text = []
+    # We get errors here because of new dev.json file
     for i in evidence:
-        tmp_text.extend(sents_local[i])
+        try:
+            tmp_text.extend(sents_local[i])
+        except IndexError:
+            print(f"title: {title}\nsentences: {sents_local}\nindex: {i}\nevidence: {evidence}")
 
     tmp_eids = []
     entity_pos = []

@@ -1,7 +1,7 @@
 import sys
 import os
 import autoRun
-autoRun.choose_gpu(retry=True, min_gpu_memory=10000, sleep_time=30)
+#autoRun.choose_gpu(retry=True, min_gpu_memory=10000, sleep_time=30)
 
 import argparse
 
@@ -15,7 +15,8 @@ import torch.cuda
 import ujson as json
 from torch.utils.data import DataLoader
 from transformers import AutoConfig, AutoModel, AutoTokenizer
-from transformers.optimization import AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW
+from transformers.optimization import get_linear_schedule_with_warmup
 from model import DocREModel
 from utils import set_seed, collate_fn
 from prepro import read_docred
@@ -24,7 +25,7 @@ import pickle
 import copy
 
 from tqdm import tqdm
-from IPython import embed
+# from IPython import embed
 
 
 def train(args, model, train_features, dev_features, test_features, tokenizer=None):
@@ -412,8 +413,8 @@ def main():
     args.device = device
 
     if args.save_path != "":
-        if not os.path.exists(args.save_path):
-            os.makedirs(args.save_path)
+        if not os.path.exists("/".join(args.save_path.split("/")[:-1])):
+            os.makedirs("/".join(args.save_path.split("/")[:-1]))
 
     config = AutoConfig.from_pretrained(
         args.config_name if args.config_name else args.model_name_or_path,

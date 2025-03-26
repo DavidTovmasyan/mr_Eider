@@ -1,0 +1,7 @@
+numpy
+torch
+ujson
+tqdm
+transformers==4.30.0
+opt_einsum
+IPython
