@@ -500,11 +500,11 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True):
                         for mention in train_triple[h, t]:
                             relation[mention["relation"]] = 1
 
-                        if ablation == 'eider':
+                        if ablation == 'eider':  # Constructing evidences based on annotations
                             for mention in train_triple[h, t]:
                                 for i in mention['evidence']:
                                     sen_evi[i] = 1
-                        elif ablation == 'eider_rule':
+                        elif ablation == 'eider_rule':  # Constructing evidences based on rules and corefs extracted via hoi
                             if len(eid2coref_co_occur[h][t]) > 0:
                                     evidence = eid2coref_co_occur[h][t]
                             else:
