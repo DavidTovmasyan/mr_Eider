@@ -9,8 +9,22 @@ from collections import defaultdict, Counter
 import copy
 import pickle
 import os
+import sys
+import psutil
 
 from IPython import embed
+
+# Define the memory limit in bytes (e.g., 10 GB)
+MEMORY_LIMIT = 10 * 1024 * 1024 * 1024  # 10 GB in bytes
+
+def check_memory():
+    # Get the current process ID
+    pid = os.getpid()
+    # Get the process information using psutil
+    process = psutil.Process(pid)
+    # Get the memory usage in bytes
+    memory_usage = process.memory_info().rss
+    return memory_usage
 
 dataset_path = 'dataset/'
 docred_rel2id = json.load(open(dataset_path + 'meta/rel2id.json', 'r'))
@@ -154,7 +168,7 @@ def find_local_pos(sents, pos, sent_id=None):
         local_end = pos[1] - cur_length
         return sent_id, (local_start, local_end)
 
-def add_coref(sents, original_entities, coref_results=None):
+def add_coref(sents, original_entities, coref_results=None, is_distant=False):
     # sents = sample['sents'],
     entities = copy.deepcopy(original_entities)
     corefs = []
@@ -180,7 +194,10 @@ def add_coref(sents, original_entities, coref_results=None):
         nps = []
         for start, end in cluster:
             sent_id = coref_results['sentence_map'][start]
-            token_ids = sorted(set(coref_results['subtoken_map'][start:end+1]), reverse=False)
+            if is_distant:
+                token_ids = sorted(set(coref_results['subtoken_map'][0][start:end+1]), reverse=False)  # TODO: [0] should be removed for other exps
+            else:
+                token_ids = sorted(set(coref_results['subtoken_map'][start:end+1]), reverse=False)  # TODO: [0] should be removed for other exps
             token = tokens[token_ids[0]:token_ids[-1]+1]
             name = ' '.join(token).lower()
 
@@ -305,7 +322,7 @@ def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, s
     return feature, pos, neg
 
 # @profile
-def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True):
+def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_distant=False):
 
     if args is not None:
         max_seq_length = args.max_seq_length
@@ -369,7 +386,7 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True):
             coref_result = coref_results[doc_id]
 
             # always use the original entities and sents
-            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'], sample['vertexSet'], coref_result)
+            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'], sample['vertexSet'], coref_result, is_distant=is_distant)
             entities = sample['vertexSet']
             coref_count += tmp_coref_count
         else:
@@ -575,3 +592,283 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True):
             pickle.dump(features, open( feature_file, "wb") )
 
     return features
+
+def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, is_distant=False):
+
+    if args is not None:
+        max_seq_length = args.max_seq_length
+        coref_method = args.coref_method
+        feature_path = args.feature_path
+        rel2htype_file = args.rel2htype_file
+        max_sen_num = args.max_sen_num
+
+    if ablation is None:
+        ablation = args.ablation
+
+    mode = file_in.split('/')[-1].split('.')[0]
+    evi_pred_file = mode + '_' + args.evi_pred_file
+
+    if feature_path != '':
+        ablation_or_emarker = ablation
+
+        if coref_method in ['none']:
+            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + mode )
+        else:
+            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + coref_method + '_' + mode )
+
+        if args.transformer_type == 'roberta':
+            feature_file = feature_file + '_roberta'
+
+        feature_file = feature_file + '.pkl'
+
+        if os.path.exists(feature_file):
+            print('Feature file:', feature_file)
+            features = pickle.load( open( feature_file, "rb") )
+            print('Feature loaded from', feature_file)
+
+            return features
+
+    i_line = 0
+    pos_samples = 0
+    neg_samples = 0
+    count = 0
+    coref_count = 0
+    features = []
+    evidence_lengths = []
+    if file_in == "":
+        return None
+    print('Reading from:', file_in)
+    with open(file_in, "r") as fh:
+        data = json.load(fh)
+
+    if coref_method == 'hoi':
+        # load from file
+        coref_file = 'coref_results/' + mode + '_coref_results.json'
+        with open(coref_file) as f:
+            coref_results = json.load(f)
+
+    if ablation in ['evi_pred']:
+        evi_pred_by_doc = pickle.load(open( evi_pred_file, "rb") )
+
+    for doc_id, sample in tqdm( enumerate(data), desc="Example: ", total=len(data)): # each doc
+
+        # add coref to entities
+        if coref_method != 'none':
+            coref_result = coref_results[doc_id]
+
+            # always use the original entities and sents
+            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'], sample['vertexSet'], coref_result, is_distant=is_distant)
+            entities = sample['vertexSet']
+            coref_count += tmp_coref_count
+        else:
+            entities_w_coref = entities = sample['vertexSet']
+
+        eid2sent_id = {}
+        for eid, e in enumerate( entities ):
+            eid2sent_id[eid] = sorted(set([m['sent_id'] for m in e]))
+
+        eid2co_occur = {}
+        for ei in range(len(entities)):
+            eid2co_occur[ei] = defaultdict(list)
+            for ej in range(len(entities)):
+                if ei == ej:
+                    continue
+                evi = sorted(set(eid2sent_id[ei]).intersection(set(eid2sent_id[ej])))
+                if len(evi) > 0:
+                    eid2co_occur[ei][ej] = evi
+
+        core_eid = find_core_ent(entities, sample['title'], sample['sents'])
+
+        eid2freq = {eid: len(entities_w_coref[eid]) for eid in range(len(entities))}
+
+        sents, sent_map, sents_local, sent_map_local, sen_pos = add_entity_markers(entities, sample['sents'], tokenizer)
+
+        if ablation not in ['eider', 'eider_rule']:
+            sen_pos = []
+
+        train_triple = {}
+        if "labels" in sample:
+            for label in sample['labels']:
+                evidence = label['evidence']
+                r = int(docred_rel2id[label['r']])
+                if (label['h'], label['t']) not in train_triple:
+                    train_triple[(label['h'], label['t'])] = [
+                        {'relation': r, 'evidence': evidence}]
+                else:
+                    train_triple[(label['h'], label['t'])].append(
+                        {'relation': r, 'evidence': evidence})
+
+
+        if ablation in ['evi_rule', 'evi_pred'] and if_inference:
+            sents_set = []
+            for h in range(len(entities)):
+                for t in range(len(entities)):
+                    # produce tmp sent
+                    if h == t:
+                        continue
+
+                    relations, hts = [], []
+                    original_hts = []
+                    if ablation == 'evi_pred':
+                        if sample['title'] not in evi_pred_by_doc or (h,t) not in evi_pred_by_doc[ sample['title'] ]:
+                            continue
+                        evidence = evi_pred_by_doc[ sample['title'] ][(h,t)]
+                        evidence = [x for x in evidence if x < len(sample['sents']) ]
+
+                    elif ablation == 'evi_rule':
+                        if len(eid2coref_co_occur[h][t]) > 0:
+                                evidence = eid2coref_co_occur[h][t]
+                        else:
+                            evidence = []
+                            bridges = []
+
+                            bridges = [x for x in eid2coref_co_occur[h] if x in eid2coref_co_occur[t] and x not in [h,t]]
+                            if len(bridges) > 0:
+                                # choose the most frequent bridge
+                                if core_eid in bridges:
+                                    b = core_eid
+                                else:
+                                    b = sorted(bridges, key=lambda x:eid2freq[x], reverse=True)[0]
+                                bridges = [b]
+
+                            for b in bridges:
+                                evi_hb = eid2coref_co_occur[h][b]
+                                evi_bt = eid2coref_co_occur[t][b]
+                                evidence.extend(evi_hb + evi_bt)
+                            evidence = sorted(set(evidence))
+
+                    # check if h and t are both in evidence:
+                    ts = eid2sent_id[t]
+                    if len(set(ts).intersection(set(evidence))) == 0:
+                        evidence.insert(0, ts[0])
+
+                    hs = eid2sent_id[h]
+                    if len(set(hs).intersection(set(evidence))) == 0:
+                        evidence.insert(0, hs[0])
+
+                    evidence = sorted(set(evidence))
+
+                    if evidence in sents_set:
+                        continue
+                    sents_set.append(evidence)
+                    evidence_lengths.append(len(evidence))
+
+                    feature, pos, neg = pseudo_doc2feature(args, ablation, sample['title'], evidence, sents_local, entities, sent_map_local, train_triple, eid2coref_co_occur, tokenizer)
+                    pos_samples += pos
+                    neg_samples += neg
+
+                    i_line += 1
+                    features.append(feature)
+
+                    count += 1
+
+
+        if ablation not in ['evi_rule', 'evi_pred'] or not if_inference: # in training, add the whole document anyway..
+            entity_pos = []
+            for e in entities:
+                entity_pos.append([])
+                for m in e:
+                    start = sent_map[m["sent_id"]][m["pos"][0]]
+                    end = sent_map[m["sent_id"]][m["pos"][1]]
+                    entity_pos[-1].append((start, end,))
+
+            relations, hts = [], []
+            evis, sen_evis = [], []
+            ht2hts_idx = {}
+            max_bridge_num = 5
+
+            for h in range(len(entities)):
+                for t in range(len(entities)):
+                    if h == t:
+                        continue
+
+                    if (h,t) in train_triple:
+                        relation = [0] * len(docred_rel2id)
+                        sen_evi = np.zeros( max_sen_num, dtype=int)
+                        for mention in train_triple[h, t]:
+                            relation[mention["relation"]] = 1
+
+                        if ablation == 'eider':  # Constructing evidences based on annotations
+                            for mention in train_triple[h, t]:
+                                for i in mention['evidence']:
+                                    sen_evi[i] = 1
+                        elif ablation == 'eider_rule':  # Constructing evidences based on rules and corefs extracted via hoi
+                            if len(eid2coref_co_occur[h][t]) > 0:
+                                    evidence = eid2coref_co_occur[h][t]
+                            else:
+                                evidence = []
+                                bridges = [x for x in eid2coref_co_occur[h] if x in eid2coref_co_occur[t] and x not in [h,t]]
+                                if len(bridges) > 0:
+                                    # choose the most frequent bridge
+                                    if core_eid in bridges:
+                                        b = core_eid
+                                    else:
+                                        b = sorted(bridges, key=lambda x:eid2freq[x], reverse=True)[0]
+                                    evi_hb = eid2coref_co_occur[h][b]
+                                    evi_bt = eid2coref_co_occur[t][b]
+                                    evidence.extend(evi_hb + evi_bt)
+
+                            ts = eid2sent_id[t]
+                            if len(set(ts).intersection(set(evidence))) == 0:
+                                evidence.insert(0, ts[0])
+
+                            hs = eid2sent_id[h]
+                            if len(set(hs).intersection(set(evidence))) == 0:
+                                evidence.insert(0, hs[0])
+
+                            for i in set(evidence):
+                                sen_evi[i] = 1
+
+                        if ablation in ['eider', 'eider_rule']:
+                            sen_evis.append(sen_evi)
+
+                        relations.append(relation)
+                        ht2hts_idx[(h,t)] = len(hts)
+                        hts.append([h, t])
+                        pos_samples += 1
+                    else:
+                        relation = [1] + [0] * (len(docred_rel2id) - 1)
+
+                        relations.append(relation)
+                        ht2hts_idx[(h,t)] = len(hts)
+                        hts.append([h, t])
+                        neg_samples += 1
+
+            if coref_method != 'none':
+                d = eid2coref_co_occur
+            else:
+                d = eid2co_occur
+
+            memory_usage = check_memory()
+            print(f"Current memory usage: {memory_usage / (1024 * 1024 * 1024):.2f} GB")
+
+            # If memory usage exceeds the defined limit, terminate the process
+            if memory_usage > MEMORY_LIMIT:
+                print("Memory limit exceeded! Terminating the process.")
+                sys.exit(1)  # Exit with an error code
+
+            yield return_feature(sents, entity_pos, relations, hts, sample['title'], tokenizer, sen_labels=sen_evis, sen_pos=sen_pos)
+            # feature = return_feature(sents, entity_pos, relations, hts, sample['title'], tokenizer, \
+            #                             sen_labels=sen_evis, \
+            #                             sen_pos=sen_pos)
+
+            # i_line += 1
+            # features.append(feature)
+
+    # print("# of documents {}.".format(i_line))
+    # print("# of positive examples {}.".format(pos_samples))
+    # print("# of negative examples {}.".format(neg_samples)) # all entity pairs without any relations
+    # print('# of coref detected {}'.format(coref_count))
+    # if len(evidence_lengths) > 0:
+    #     print('average sent num in evidence {}'.format(np.mean(evidence_lengths)))
+
+
+    # if feature_path != '':
+    #     if not os.path.exists(feature_path):
+    #         os.makedirs(feature_path)
+            
+    #     if not os.path.exists(feature_file):
+    #         print('Saving to', feature_file)
+    #         pickle.dump(features, open( feature_file, "wb") )
+
+    # return features

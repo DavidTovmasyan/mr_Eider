@@ -209,7 +209,8 @@ class DocREModel(nn.Module):
 
                 s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num) # choose the highest prob
                 evi_loss = F.binary_cross_entropy_with_logits(s_logits.float(), s_labels.float())
-                loss = loss + 0.1*evi_loss
+                if not torch.isnan(evi_loss):  # TODO: Added, maybe need to remove later
+                    loss = loss + 0.1*evi_loss
                 # loss = evi_loss
 
                 if torch.isnan(loss):

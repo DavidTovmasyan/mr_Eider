@@ -13,13 +13,13 @@ import torch.optim as optim
 import apex
 import torch.cuda
 import ujson as json
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, IterableDataset
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers import AdamW
 from transformers.optimization import get_linear_schedule_with_warmup
 from model import DocREModel
 from utils import set_seed, collate_fn
-from prepro import read_docred
+from prepro import read_docred, read_docred_gen
 from evaluation import * # to_official, official_evaluate, gen_official, to_score
 import pickle
 import copy
@@ -28,21 +28,35 @@ from tqdm import tqdm
 # from IPython import embed
 
 
-def train(args, model, train_features, dev_features, test_features, tokenizer=None):
-    def finetune(features, optimizer, num_epoch, tokenizer=None):
+def train(args, model, train_features, dev_features, test_features, tokenizer=None, train_features_distant=None):
+    def finetune(features, optimizer, num_epoch, tokenizer=None, distant_features=None, num_pretrain_epochs=1):
         best_score = -1
-        train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
-        train_iterator = range(int(num_epoch))
 
-        total_steps = int(len(train_dataloader) * num_epoch // args.gradient_accumulation_steps)
+        if distant_features is not None:
+            train_distant_dataloader = DataLoader(distant_features, batch_size=args.train_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=True)
+            total_steps_distant = int(25469 * num_pretrain_epochs // args.gradient_accumulation_steps)  # Temporary changed to constant for generator
+
+        train_dataloader_gold = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
+        train_iterator = range(int(num_epoch)) if distant_features is None else range(int(num_epoch + num_pretrain_epochs))
+
+        total_steps = int(len(train_dataloader_gold) * num_epoch // args.gradient_accumulation_steps)
+        total_steps = total_steps if distant_features is None else total_steps + total_steps_distant
         warmup_steps = int(total_steps * args.warmup_ratio)
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
         print("Total steps: {}".format(total_steps))
         print("Warmup steps: {}".format(warmup_steps))
+        if distant_features is not None:
+            print(f"Of which pretrain steps: {total_steps_distant}")
 
         for epoch in train_iterator:
             model.zero_grad()
-            for step, batch in enumerate( tqdm(train_dataloader) ):
+
+            if distant_features is not None and epoch < num_pretrain_epochs:
+                train_dataloader = train_distant_dataloader
+            else:
+                train_dataloader = train_dataloader_gold
+
+            for step, batch in enumerate( tqdm(train_dataloader, desc="Step", total=(int(101873//4) + 1 if distant_features is not None and epoch < num_pretrain_epochs else None)) ):
                 model.train()
 
                 inputs = {'input_ids': batch[0].to(args.device),
@@ -67,8 +81,11 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
                     optimizer.step()
                     scheduler.step()
                     model.zero_grad()
-
-                if (step == 0 and epoch==0) or (step + 1) == len(train_dataloader) - 1:
+                if distant_features is not None and epoch < num_pretrain_epochs:
+                    last_step = int(101873//4)
+                else:
+                    last_step = len(train_dataloader) - 1
+                if (step == 0 and epoch==0) or (step + 1) == last_step:
                     print('epoch', epoch, "loss:", loss.item())
                     dev_score, dev_output, dev_pred, thresh = evaluate(args, model, dev_features, tokenizer=tokenizer, tag="dev")
                     print(dev_output)
@@ -99,7 +116,7 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
     set_seed(args)
     model.zero_grad()
     print('model initialized')
-    finetune(train_features, optimizer, args.num_train_epochs, tokenizer=tokenizer)
+    finetune(train_features, optimizer, args.num_train_epochs, tokenizer=tokenizer, distant_features=train_features_distant, num_pretrain_epochs=args.num_pretrain_epochs)
 
 def evaluate(args, model, features, tokenizer=None, tag="dev", features2=None):
     sen_preds = []
@@ -405,6 +422,9 @@ def main():
                             			help="random seed for initialization")
         parser.add_argument("--num_class", type=int, default=97,
                             			help="Number of relation types in dataset.")
+        parser.add_argument("--do_pretrain", type=bool, default=False, help="Do pretrain.")
+        parser.add_argument("--silver_data_file", type=str, default="train_distant.json", help="Silver data file.")
+        parser.add_argument("--num_pretrain_epochs", type=int, default=1)
 
     args = parser.parse_args()
 
@@ -428,6 +448,22 @@ def main():
 
     train_file = os.path.join(args.data_dir, args.train_file)
     dev_file = os.path.join(args.data_dir, args.dev_file)
+    train_features_distant = None
+    if args.do_pretrain:
+        class DistantDataset(IterableDataset):
+            def __init__(self, args, file, tokenizer):
+                self.generator_fn = read_docred_gen
+                self.args = args
+                self.file = file
+                self.tokenizer = tokenizer
+
+            def __iter__(self):
+                return self.generator_fn(self.args, self.file, self.tokenizer, if_inference=False, is_distant=True)
+
+
+        train_file_distant = os.path.join(args.data_dir, args.silver_data_file)
+        train_features_distant = DistantDataset(args, train_file_distant, tokenizer)
+        # train_features_distant = read_docred_gen(args, train_file_distant, tokenizer, if_inference=False, is_distant=True)
 
     if args.load_path == '':
         train_features = read(args, train_file, tokenizer, if_inference=False)
@@ -485,7 +521,7 @@ def main():
                 json.dump(pred, fh)
 
     else:
-        train(args, model, train_features, dev_features, test_features, tokenizer=tokenizer)
+        train(args, model, train_features, dev_features, test_features, tokenizer=tokenizer, train_features_distant=train_features_distant)
 
 if __name__ == "__main__":
     main()
