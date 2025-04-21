@@ -27,9 +27,11 @@ def check_memory():
     return memory_usage
 
 dataset_path = 'dataset/'
-docred_rel2id = json.load(open(dataset_path + 'meta/rel2id.json', 'r'))
+rel_mode='_incremental_241'  # TODO: Change while using
+#rel_mode = input("Please input rel_mode '' or _incremental_XXX or _pretrain_XXX: ")
+docred_rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
 id2rel = {value: key for key, value in docred_rel2id.items()}
-rel2name = json.load(open(dataset_path + 'meta/rel_info.json', 'r')) # PXX -> name
+rel2name = json.load(open(dataset_path + 'meta/rel_info' + rel_mode + '.json', 'r')) # PXX -> name
 cdr_rel2id = {'1:NR:2': 0, '1:CID:2': 1}
 gda_rel2id = {'1:NR:2': 0, '1:GDA:2': 1}
 
@@ -312,8 +314,8 @@ def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, s
                 original_hts.append([h0, t0])
                 neg += 1
 
-    assert( np.all(np.array([len(r) for r in relations]) == 97))
-    assert(len(relations) == len(hts))
+    #assert( np.all(np.array([len(r) for r in relations]) == 97))
+    #assert(len(relations) == len(hts))
     # print(len(relations), len(tmp_eids)*(len(tmp_eids) - 1) )
     # assert len(relations) == len(tmp_eids) * (len(tmp_eids) - 1)
 

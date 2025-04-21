@@ -13,7 +13,7 @@ from torch.nn.parameter import Parameter
 INF = 1e8
 
 class DocREModel(nn.Module):
-    def __init__(self, config, model, ablation='atlop', max_sen_num=25, emb_size=768, block_size=64, num_labels=-1, att_size=128, b_hid_size=194):
+    def __init__(self, config, model, ablation='atlop', max_sen_num=25, emb_size=768, block_size=64, num_labels=-1, att_size=128, b_hid_size=194, add_head=False, add_head_test=False):
         super().__init__()
         self.config = config
         self.model = model
@@ -25,22 +25,36 @@ class DocREModel(nn.Module):
         self.max_sen_num = max_sen_num
         self.ablation = ablation
 
+        self.add_head = add_head
+        self.add_head_test = add_head_test
+
         if self.ablation in ['eider', 'eider_rule']:
             self.b_hid_size = b_hid_size
-
-            self.sr_bilinear = nn.Linear(config.hidden_size * block_size, config.num_labels)
+            if self.add_head or self.add_head_test:
+                self.sr_bilinear = nn.Linear(config.hidden_size * block_size, 96)
+            else:
+                self.sr_bilinear = nn.Linear(config.hidden_size * block_size, config.num_labels)
+            # self.sr_bilinears = nn.ModuleList([nn.Linear(config.hidden_size * block_size, 1) for _ in range(config.num_labels)])
 
         extractor_input_size = 2 * config.hidden_size
 
         self.head_extractor = nn.Linear(extractor_input_size, emb_size)
         self.tail_extractor = nn.Linear(extractor_input_size, emb_size)
 
-        self.bilinear = nn.Linear(emb_size * block_size, output_size)
+        if self.add_head or self.add_head_test:
+            self.bilinear = nn.Linear(emb_size * block_size, 96)
+        else:
+            self.bilinear = nn.Linear(emb_size * block_size, output_size)
+        # self.bilinears = nn.ModuleList([nn.Linear(emb_size * block_size, 1) for _ in range(output_size)])
 
         self.emb_size = emb_size
         self.block_size = block_size
         self.num_labels = num_labels
         self.num_rels = output_size
+
+        if self.add_head or self.add_head_test:
+            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, 2)
+            self.new_classifier = nn.Linear(emb_size * block_size, 2)            
 
     def encode(self, input_ids, attention_mask):
         config = self.config
@@ -169,7 +183,11 @@ class DocREModel(nn.Module):
         # b2: [bs', bl_num, 1, bl]
         bl = (b1.unsqueeze(3) * b2.unsqueeze(2)).view(-1, self.emb_size * self.block_size) # bl: [bs * n_p, emb_size * block_size]
 
-        logits = self.bilinear(bl)
+        if self.add_head or self.add_head_test:
+            logits = self.new_classifier(bl)
+        else:
+            logits = self.bilinear(bl)
+        # logits = torch.cat([bilinear(bl) for bilinear in self.bilinears], dim=1)
 
         output = (self.loss_fnt.get_label(logits, num_labels=self.num_labels),)
 
@@ -205,7 +223,11 @@ class DocREModel(nn.Module):
                 r2 = rs.view(-1, self.hidden_size // self.block_size, self.block_size) # (bs', #bl, bl_size)
                 bl_sr = (s1.unsqueeze(4) * r2.unsqueeze(1).unsqueeze(3)).view(-1, self.max_sen_num, self.hidden_size * self.block_size)
                 # s1 -> (bs', sents_num, #bl, bl_size, 1); r2 -> (bs', 1, #bl, 1, bl_size)
-                s_logits = self.sr_bilinear(bl_sr) # [bs, sents_num, num_labels]
+                if self.add_head or self.add_head_test:
+                    s_logits = self.sr_new_classifier(bl_sr)
+                else:
+                    s_logits = self.sr_bilinear(bl_sr) # [bs, sents_num, num_labels]
+                # s_logits = torch.cat([sr_bilinear(bl_sr) for sr_bilinear in self.sr_bilinears], dim=2) # [bs, sents_num, num_labels]
 
                 s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num) # choose the highest prob
                 evi_loss = F.binary_cross_entropy_with_logits(s_logits.float(), s_labels.float())

@@ -10,7 +10,9 @@ from IPython import embed
 from tqdm import tqdm
 
 dataset_path = 'dataset/'
-rel2id = json.load(open(dataset_path + 'meta/rel2id.json', 'r'))
+rel_mode='_incremental_241'  # TODO: Change while using
+#rel_mode = input("Please input rel mode '' or _incremental_XXX or _pretrain_XXX")
+rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
 id2rel = {value: key for key, value in rel2id.items()}
 
 def cal_f1(prec, recall):
@@ -307,7 +309,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     fact_in_train_distant = gen_train_facts(os.path.join(path, "train_distant.json"), truth_dir)
 
     if mode == 'dev':
-        truth = json.load(open(os.path.join(path, "dev.json")))
+        truth = json.load(open(os.path.join(path, "cil/dev" + rel_mode + ".json")))  # TODO: Change while using
     elif mode == 'train':
         truth = json.load(open(os.path.join(path, "train_annotated.json")))
 
@@ -316,6 +318,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     titleset = set([])
 
     title2vectexSet = {}
+    correct_re_individual = {}
 
     for x in truth:
         title = x['title']
@@ -329,6 +332,11 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
             h_idx = label['h']
             t_idx = label['t']
             std[(title, r, h_idx, t_idx)] = set(label['evidence'])
+            if r in correct_re_individual:
+                correct_re_individual[r]["total_true"] += 1
+            else:
+                correct_re_individual[r] = {"f1": 0, "precision": 0, "recall": 0, "total_pred": 0, "total_true": 1, "correct": 0}
+
             tot_evidences += len(label['evidence'])
 
     tot_relations = len(std)
@@ -364,8 +372,14 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
             evi = set([])
         pred_evi += len(evi)
 
+        if r in correct_re_individual:
+            correct_re_individual[r]["total_pred"] += 1
+        else:
+            correct_re_individual[r] = {"f1": 0, "precision": 0, "recall": 0, "total_pred": 1, "total_true": 0, "correct": 0}
+
         if (title, r, h_idx, t_idx) in std:
             correct_re += 1
+            correct_re_individual[r]["correct"] += 1
             stdevi = std[(title, r, h_idx, t_idx)]
             correct_evidence += len(stdevi & evi)
             in_train_annotated = in_train_distant = False
@@ -391,6 +405,22 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     else:
         re_f1 = 2.0 * re_p * re_r / (re_p + re_r)
 
+    print("Evaluating individuals...")
+    for rel_name, rel_info in correct_re_individual.items():
+        if rel_info["total_pred"] != 0:
+            rel_info["precision"] = 1.0 * rel_info["correct"] / rel_info["total_pred"]
+        else:
+            rel_info["precision"] = 0
+        if rel_info["total_true"] != 0:
+            rel_info["recall"] = 1.0 * rel_info["correct"] / rel_info["total_true"]
+        else:
+            rel_info["recall"] = 0
+        if rel_info["precision"] + rel_info["recall"] != 0:
+            rel_info["f1"] = 2.0 * rel_info["precision"] * rel_info["recall"] / (rel_info["precision"] + rel_info["recall"])
+        else:
+            rel_info["f1"] = 0
+    # print(correct_re_individual)
+
     evi_p = 1.0 * correct_evidence / pred_evi if pred_evi > 0 else 0
     evi_r = 1.0 * correct_evidence / tot_evidences
     if evi_p + evi_r == 0:
@@ -411,4 +441,4 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     else:
         re_f1_ignore_train = 2.0 * re_p_ignore_train * re_r / (re_p_ignore_train + re_r)
 
-    return re_f1, evi_f1, re_f1_ignore_train_annotated, re_f1_ignore_train
+    return re_f1, evi_f1, re_f1_ignore_train_annotated, re_f1_ignore_train, correct_re_individual

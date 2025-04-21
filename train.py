@@ -33,8 +33,14 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
         best_score = -1
 
         if distant_features is not None:
+            if args.add_head:
+                distant_data_size = 1589
+            elif args.num_class == 96:
+                distant_data_size = 100284
+            else:
+                distant_data_size = 101873
             train_distant_dataloader = DataLoader(distant_features, batch_size=args.train_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=True)
-            total_steps_distant = int(25469 * num_pretrain_epochs // args.gradient_accumulation_steps)  # Temporary changed to constant for generator
+            total_steps_distant = int(distant_data_size//args.train_batch_size * num_pretrain_epochs // args.gradient_accumulation_steps)  # Temporary changed to constant for generator
 
         train_dataloader_gold = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
         train_iterator = range(int(num_epoch)) if distant_features is None else range(int(num_epoch + num_pretrain_epochs))
@@ -56,7 +62,7 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
             else:
                 train_dataloader = train_dataloader_gold
 
-            for step, batch in enumerate( tqdm(train_dataloader, desc="Step", total=(int(101873//4) + 1 if distant_features is not None and epoch < num_pretrain_epochs else None)) ):
+            for step, batch in enumerate( tqdm(train_dataloader, desc="Step", total=(int(distant_data_size//args.train_batch_size) + 1 if distant_features is not None and epoch < num_pretrain_epochs else None)) ):
                 model.train()
 
                 inputs = {'input_ids': batch[0].to(args.device),
@@ -82,17 +88,20 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
                     scheduler.step()
                     model.zero_grad()
                 if distant_features is not None and epoch < num_pretrain_epochs:
-                    last_step = int(101873//4)
+                    last_step = int(distant_data_size//args.train_batch_size)
                 else:
                     last_step = len(train_dataloader) - 1
                 if (step == 0 and epoch==0) or (step + 1) == last_step:
                     print('epoch', epoch, "loss:", loss.item())
-                    dev_score, dev_output, dev_pred, thresh = evaluate(args, model, dev_features, tokenizer=tokenizer, tag="dev")
+                    dev_score, dev_output, dev_pred, thresh, re_ind = evaluate(args, model, dev_features, tokenizer=tokenizer, tag="dev")
                     print(dev_output)
                     if dev_score > best_score:
                         best_score = dev_score
                         with open("dev_result_"+ args.ablation + "_" + args.name + args.ensemble_mode + '_' + args.model_name_or_path + ".json", "w") as fh:
                             json.dump(dev_pred, fh)
+
+                        with open("re_ind_res_" + args.ablation + "_" + args.name + "_" + args.model_name_or_path + ".json", "w") as f:
+                            json.dump(re_ind, f)
 
                         if test_features is not None:
                             pred = report(args, model, test_features)
@@ -105,13 +114,23 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
     new_layer = ["extractor", "bilinear"]
     if args.ablation in ['eider', 'eider_rule']:
         new_layer.extend(['sr_bilinear'])
+    if args.add_head:
+        new_layer = ["new_classifier", "sr_new_classifier"]
 
     optimizer_grouped_parameters = [
         {"params": [p for n, p in model.named_parameters() if not any(nd in n for nd in new_layer)], },
         {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in new_layer)], "lr": args.grouped_learning_rate},
     ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    model, optimizer = apex.amp.initialize(model, optimizer, opt_level="O1", verbosity=0)
+    print("Trainable parameters:")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(name)
+
+    if args.add_head:
+        _, optimizer = apex.amp.initialize(model, optimizer, opt_level="O1", verbosity=0)
+    else:
+        model, optimizer = apex.amp.initialize(model, optimizer, opt_level="O1", verbosity=0)
 
     set_seed(args)
     model.zero_grad()
@@ -124,6 +143,7 @@ def evaluate(args, model, features, tokenizer=None, tag="dev", features2=None):
     preds2, scores2, topks2 = [], [], []
 
     thresh = None
+    re_ind={}
 
     if args.load_path != '' and args.ensemble_mode != 'none':
         load_model = args.load_path.split('/')[1].split('.')[0]
@@ -136,13 +156,13 @@ def evaluate(args, model, features, tokenizer=None, tag="dev", features2=None):
 
             title2gt = extract_gt(args.feature_path, features)
             ans, thresh = ensemble_scores(title2scores, title2scores2, title2gt, thresh=thresh)
-            best_f1, best_evi_f1, best_f1_ign, _ = official_evaluate(ans, args.data_dir)
+            best_f1, best_evi_f1, best_f1_ign, _, re_ind = official_evaluate(ans, args.data_dir)
 
             output = {
                 tag + "_F1": best_f1 * 100,
                 tag + "_F1_ign": best_f1_ign * 100,
             }
-            return best_f1, output, ans, thresh, None
+            return best_f1, output, ans, thresh, None, re_ind
 
     dataloader = DataLoader(features, batch_size=args.test_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=False)
     print('Evaluating original', len(dataloader), 'samples...')
@@ -248,7 +268,7 @@ def evaluate(args, model, features, tokenizer=None, tag="dev", features2=None):
             ans = to_official(preds, features)
 
     if len(ans) > 0:
-        best_f1, best_evi_f1, best_f1_ign, _ = official_evaluate(ans, args.data_dir, mode=tag)
+        best_f1, best_evi_f1, best_f1_ign, _, re_ind = official_evaluate(ans, args.data_dir, mode=tag)
     else:
         best_f1 = best_f1_ign = -1
     output = {
@@ -258,7 +278,7 @@ def evaluate(args, model, features, tokenizer=None, tag="dev", features2=None):
     if args.ablation in ['eider', 'eider_rule'] and args.evi_eval_mode != 'none':
         output[tag+'_evi_F1'] = best_evi_f1 * 100
 
-    return best_f1, output, ans, thresh
+    return best_f1, output, ans, thresh, re_ind
 
 def report(args, model, features, features2=None, thresh=None):
     sen_preds = []
@@ -425,10 +445,12 @@ def main():
         parser.add_argument("--do_pretrain", type=bool, default=False, help="Do pretrain.")
         parser.add_argument("--silver_data_file", type=str, default="train_distant.json", help="Silver data file.")
         parser.add_argument("--num_pretrain_epochs", type=int, default=1)
+        parser.add_argument("--add_head", default=False, type=bool)
+        parser.add_argument("--add_head_test", default=False, type=bool)
 
     args = parser.parse_args()
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
     args.device = device
 
@@ -465,8 +487,8 @@ def main():
         train_features_distant = DistantDataset(args, train_file_distant, tokenizer)
         # train_features_distant = read_docred_gen(args, train_file_distant, tokenizer, if_inference=False, is_distant=True)
 
-    if args.load_path == '':
-        train_features = read(args, train_file, tokenizer, if_inference=False)
+    if args.load_path == '' or args.add_head:
+        train_features = read(args, train_file, tokenizer, if_inference=False, ablation="eider")
     dev_features = read(args, dev_file, tokenizer)
 
     if args.eval_mode == 'dev_only':
@@ -496,24 +518,41 @@ def main():
         args.ablation = 'eider'
 
     set_seed(args)
-    model = DocREModel(config, model, num_labels=args.num_labels, ablation=args.ablation, max_sen_num=args.max_sen_num)
+    model = DocREModel(config, model, num_labels=args.num_labels, ablation=args.ablation, max_sen_num=args.max_sen_num, add_head=args.add_head, add_head_test=args.add_head_test)
     model.to(device)
 
-    if args.load_path != '':
+    if args.add_head:
+        name = args.load_path.split('/')[1].split('.')[0].split('EIDER_')[1]
+        print('Loading from', args.load_path)
+        model = apex.amp.initialize(model, opt_level="O1", verbosity=0)
+        missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.load_path), strict=False)
+        print("Missing keys:", missing_keys)
+        print("Unexpected keys:", unexpected_keys)
+        for param in model.parameters():
+            param.requires_grad = False
+
+        for param in model.new_classifier.parameters():
+            param.requires_grad = True
+
+        train(args, model, train_features, dev_features, test_features, tokenizer=tokenizer, train_features_distant=train_features_distant)
+    elif args.load_path != '':
         name = args.load_path.split('/')[1].split('.')[0].split('EIDER_')[1]
         print('Loading from', args.load_path)
         model = apex.amp.initialize(model, opt_level="O1", verbosity=0)
         model.load_state_dict(torch.load(args.load_path))
 
         if args.ensemble_mode != 'none':
-            dev_score, dev_output, dev_pred, thresh = evaluate(args, model, dev_features, \
+            dev_score, dev_output, dev_pred, thresh, re_ind = evaluate(args, model, dev_features, \
                                 features2=dev_features2)
         else:
-            dev_score, dev_output, dev_pred, thresh = evaluate(args, model, dev_features)
+            dev_score, dev_output, dev_pred, thresh, re_ind = evaluate(args, model, dev_features)
         print(dev_output)
 
         with open("dev_result_"+ args.name + '_' + name + '_' + args.model_name_or_path + ".json", "w") as fh:
             json.dump(dev_pred, fh)
+
+        with open("re_ind_res_test_" + args.ablation + "_" + args.name + "_" + args.model_name_or_path + ".json", "w") as f:
+            json.dump(re_ind, f)
 
         if test_features is not None:
             pred = report(args, model, test_features, features2 = test_features2, thresh=thresh)
