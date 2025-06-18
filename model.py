@@ -12,8 +12,11 @@ from torch.nn.parameter import Parameter
 
 INF = 1e8
 
+
 class DocREModel(nn.Module):
-    def __init__(self, config, model, ablation='atlop', max_sen_num=25, emb_size=768, block_size=64, num_labels=-1, att_size=128, b_hid_size=194, add_head=False, add_head_test=False):
+    def __init__(self, config, model, ablation='atlop', max_sen_num=25, emb_size=768, block_size=64, num_labels=-1,
+                 att_size=128, b_hid_size=194, add_head=False, add_head_test=False, use_combined_inference=False,
+                 num_incr_head=0):
         super().__init__()
         self.config = config
         self.model = model
@@ -27,25 +30,19 @@ class DocREModel(nn.Module):
 
         self.add_head = add_head
         self.add_head_test = add_head_test
+        self.use_combined_inference = use_combined_inference
+        num_head = 97 - config.num_labels + 1 if self.add_head or self.add_head_test else config.num_labels
 
         if self.ablation in ['eider', 'eider_rule']:
             self.b_hid_size = b_hid_size
-            if self.add_head or self.add_head_test:
-                self.sr_bilinear = nn.Linear(config.hidden_size * block_size, 96)
-            else:
-                self.sr_bilinear = nn.Linear(config.hidden_size * block_size, config.num_labels)
-            # self.sr_bilinears = nn.ModuleList([nn.Linear(config.hidden_size * block_size, 1) for _ in range(config.num_labels)])
+            self.sr_bilinear = nn.Linear(config.hidden_size * block_size, num_head - num_incr_head)
 
         extractor_input_size = 2 * config.hidden_size
 
         self.head_extractor = nn.Linear(extractor_input_size, emb_size)
         self.tail_extractor = nn.Linear(extractor_input_size, emb_size)
 
-        if self.add_head or self.add_head_test:
-            self.bilinear = nn.Linear(emb_size * block_size, 96)
-        else:
-            self.bilinear = nn.Linear(emb_size * block_size, output_size)
-        # self.bilinears = nn.ModuleList([nn.Linear(emb_size * block_size, 1) for _ in range(output_size)])
+        self.bilinear = nn.Linear(emb_size * block_size, num_head - num_incr_head)
 
         self.emb_size = emb_size
         self.block_size = block_size
@@ -53,8 +50,11 @@ class DocREModel(nn.Module):
         self.num_rels = output_size
 
         if self.add_head or self.add_head_test:
-            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, 2)
-            self.new_classifier = nn.Linear(emb_size * block_size, 2)            
+            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, output_size)
+            self.new_classifier = nn.Linear(emb_size * block_size, output_size)
+        elif self.use_combined_inference:
+            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, num_incr_head + 1)
+            self.new_classifier = nn.Linear(emb_size * block_size, num_incr_head + 1)
 
     def encode(self, input_ids, attention_mask):
         config = self.config
@@ -183,19 +183,55 @@ class DocREModel(nn.Module):
         # b2: [bs', bl_num, 1, bl]
         bl = (b1.unsqueeze(3) * b2.unsqueeze(2)).view(-1, self.emb_size * self.block_size) # bl: [bs * n_p, emb_size * block_size]
 
-        if self.add_head or self.add_head_test:
-            logits = self.new_classifier(bl)
+        if self.use_combined_inference:
+            logits_base = self.bilinear(bl)
+            logits_incremental = self.new_classifier(bl)
+
+            preds_base = self.loss_fnt.get_label(logits_base, num_labels=4)
+            preds_incremental = self.loss_fnt.get_label(logits_incremental, num_labels=1)
+
+            # Combine predictions (excluding thresholds)
+            combined_preds = torch.cat([preds_base[:, 1:], preds_incremental[:, 1:]], dim=1)  # [batch, 96]
+
+            # Handle NA case: if both thresholds indicate "no relation"
+            no_relation_base = preds_base[:, 0]  # Threshold activated for base_classes
+            no_relation_incremental = preds_incremental[:, 0]  # Threshold activated for incremental_classes
+
+            # Combined NA: both classifiers say "no relation"
+            combined_na = (no_relation_base * no_relation_incremental).unsqueeze(1)
+
+            # Final output:
+            final_combined_output = torch.cat([combined_na, combined_preds], dim=1)  # [batch, 97]
+
+            output = (final_combined_output,)
+
+            if return_score:  # Note that logits' scales may differ
+                def normalize_logits(logits):
+                    min_val = logits.min(dim=1, keepdim=True)[0]
+                    max_val = logits.max(dim=1, keepdim=True)[0]
+                    return (logits - min_val) / (max_val - min_val + 1e-8)
+
+                norm_logits_base = normalize_logits(logits_base)
+                norm_logits_incremental = normalize_logits(logits_incremental)
+                combined_norm_logits = torch.cat([norm_logits_base[:, 1:], norm_logits_incremental[:, 1:]], dim=1)
+                combined_norm_na = torch.min(norm_logits_base[:, 0], norm_logits_incremental[:, 0]).unsqueeze(1)
+                combined_logits = torch.cat([combined_norm_na, combined_norm_logits], dim=1)
+                scores = self.loss_fnt.get_score(combined_logits, 5)
+                output = output + (scores[0], scores[1],)
         else:
-            logits = self.bilinear(bl)
-        # logits = torch.cat([bilinear(bl) for bilinear in self.bilinears], dim=1)
+            if self.add_head or self.add_head_test:
+                logits = self.new_classifier(bl)
+            else:
+                logits = self.bilinear(bl)
+            # logits = torch.cat([bilinear(bl) for bilinear in self.bilinears], dim=1)
 
-        output = (self.loss_fnt.get_label(logits, num_labels=self.num_labels),)
+            output = (self.loss_fnt.get_label(logits, num_labels=self.num_labels),)
 
-        if return_score:
-            scores_topk = self.loss_fnt.get_score(logits, self.num_labels)
-            output = output + (scores_topk[0], scores_topk[1], )
+            if return_score:
+                scores_topk = self.loss_fnt.get_score(logits, self.num_labels)
+                output = output + (scores_topk[0], scores_topk[1],)
 
-        if labels is not None:
+        if labels is not None:  # Training
             labels = [torch.tensor(label) for label in labels]
 
             if sen_labels is not None:
@@ -204,10 +240,10 @@ class DocREModel(nn.Module):
 
             loss = self.loss_fnt(logits.float(), labels.float())
 
-            if sen_labels is not None: # 'eider'
-                s_labels = [torch.tensor(s_label) for s_label in sen_labels] # sen_labels: list of 2d lists
-                s_labels = torch.cat(s_labels, dim=0).to(ss) # [ps, max_sen_num]
-                idx_used = torch.nonzero(labels[:,1:].sum(dim=-1)).view(-1)
+            if sen_labels is not None:  # 'eider'
+                s_labels = [torch.tensor(s_label) for s_label in sen_labels]  # sen_labels: list of 2d lists
+                s_labels = torch.cat(s_labels, dim=0).to(ss)  # [ps, max_sen_num]
+                idx_used = torch.nonzero(labels[:, 1:].sum(dim=-1)).view(-1)
 
                 # pred important sent for each (h,t,r)
                 # hs, ts: [bs, d] -> [bs', sents_num, d]
@@ -217,22 +253,25 @@ class DocREModel(nn.Module):
                 ss = ss[idx_used]
                 rs = rs[idx_used]
 
-                s1 = [ss_simple[i].unsqueeze(0).expand(num_idx_used[i], self.max_sen_num, self.hidden_size) for i in range(ss_simple.shape[0])]
-                s1 = torch.cat(s1, dim=0) # (bs', sents_num, hid)
-                s1 = s1.view(-1, self.max_sen_num, self.hidden_size // self.block_size, self.block_size) # (bs', sents_num, #bl, bl_size)
-                r2 = rs.view(-1, self.hidden_size // self.block_size, self.block_size) # (bs', #bl, bl_size)
-                bl_sr = (s1.unsqueeze(4) * r2.unsqueeze(1).unsqueeze(3)).view(-1, self.max_sen_num, self.hidden_size * self.block_size)
+                s1 = [ss_simple[i].unsqueeze(0).expand(num_idx_used[i], self.max_sen_num, self.hidden_size) for i in
+                      range(ss_simple.shape[0])]
+                s1 = torch.cat(s1, dim=0)  # (bs', sents_num, hid)
+                s1 = s1.view(-1, self.max_sen_num, self.hidden_size // self.block_size,
+                             self.block_size)  # (bs', sents_num, #bl, bl_size)
+                r2 = rs.view(-1, self.hidden_size // self.block_size, self.block_size)  # (bs', #bl, bl_size)
+                bl_sr = (s1.unsqueeze(4) * r2.unsqueeze(1).unsqueeze(3)).view(-1, self.max_sen_num,
+                                                                              self.hidden_size * self.block_size)
                 # s1 -> (bs', sents_num, #bl, bl_size, 1); r2 -> (bs', 1, #bl, 1, bl_size)
                 if self.add_head or self.add_head_test:
                     s_logits = self.sr_new_classifier(bl_sr)
                 else:
-                    s_logits = self.sr_bilinear(bl_sr) # [bs, sents_num, num_labels]
+                    s_logits = self.sr_bilinear(bl_sr)  # [bs, sents_num, num_labels]
                 # s_logits = torch.cat([sr_bilinear(bl_sr) for sr_bilinear in self.sr_bilinears], dim=2) # [bs, sents_num, num_labels]
 
-                s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num) # choose the highest prob
+                s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num)  # choose the highest prob
                 evi_loss = F.binary_cross_entropy_with_logits(s_logits.float(), s_labels.float())
                 if not torch.isnan(evi_loss):  # TODO: Added, maybe need to remove later
-                    loss = loss + 0.1*evi_loss
+                    loss = loss + 0.1 * evi_loss
                 # loss = evi_loss
 
                 if torch.isnan(loss):
@@ -240,22 +279,25 @@ class DocREModel(nn.Module):
                     embed()
 
                 if return_senatt:
-                    s_output = self.loss_fnt.get_label(s_logits, num_labels=self.num_labels).view(-1, self.max_sen_num, self.num_rels)
-                    output = output + (s_output, )
+                    s_output = self.loss_fnt.get_label(s_logits, num_labels=self.num_labels).view(-1, self.max_sen_num,
+                                                                                                  self.num_rels)
+                    output = output + (s_output,)
 
             output = (loss.to(sequence_output),) + output
 
         elif return_senatt:
             num_idx_used = [len(hts_i) for hts_i in hts]
 
-            s1 = ss.view(-1, self.max_sen_num, self.hidden_size // self.block_size, self.block_size) # (bs', sents_num, #bl, bl_size)
-            r2 = rs.view(-1, self.hidden_size // self.block_size, self.block_size) # (bs', #bl, bl_size)
-            bl_sr = (s1.unsqueeze(4) * r2.unsqueeze(1).unsqueeze(3)).view(-1, self.max_sen_num, self.hidden_size * self.block_size)
+            s1 = ss.view(-1, self.max_sen_num, self.hidden_size // self.block_size,
+                         self.block_size)  # (bs', sents_num, #bl, bl_size)
+            r2 = rs.view(-1, self.hidden_size // self.block_size, self.block_size)  # (bs', #bl, bl_size)
+            bl_sr = (s1.unsqueeze(4) * r2.unsqueeze(1).unsqueeze(3)).view(-1, self.max_sen_num,
+                                                                          self.hidden_size * self.block_size)
             # s1 -> (bs', sents_num, #bl, bl_size, 1); r2 -> (bs', 1, #bl, 1, bl_size)
-            s_logits = self.sr_bilinear(bl_sr) # [bs, sents_num, num_labels]
+            s_logits = self.sr_bilinear(bl_sr)  # [bs, sents_num, num_labels]
 
-            s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num) # choose the highest prob, [bs', sents_num]
+            s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num)  # choose the highest prob, [bs', sents_num]
             s_output = s_logits > 0
-            output = output + (s_output, )
+            output = output + (s_output,)
 
         return output

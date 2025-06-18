@@ -447,6 +447,8 @@ def main():
         parser.add_argument("--num_pretrain_epochs", type=int, default=1)
         parser.add_argument("--add_head", default=False, type=bool)
         parser.add_argument("--add_head_test", default=False, type=bool)
+        parser.add_argument("--use_combined_inference", default=False, type=bool)
+        parser.add_argument("--num_incr_head", type=int, default=0)
 
     args = parser.parse_args()
 
@@ -458,12 +460,15 @@ def main():
         if not os.path.exists("/".join(args.save_path.split("/")[:-1])):
             os.makedirs("/".join(args.save_path.split("/")[:-1]))
 
+    cache_dir = "./cache"
     config = AutoConfig.from_pretrained(
         args.config_name if args.config_name else args.model_name_or_path,
         num_labels=args.num_class,
+        cache_dir=cache_dir
     )
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_name if args.tokenizer_name else args.model_name_or_path,
+        cache_dir=cache_dir
     )
 
     read = read_docred
@@ -508,6 +513,7 @@ def main():
         args.model_name_or_path,
         from_tf=bool(".ckpt" in args.model_name_or_path),
         config=config,
+        cache_dir=cache_dir
     )
 
     config.cls_token_id = tokenizer.cls_token_id
@@ -518,7 +524,7 @@ def main():
         args.ablation = 'eider'
 
     set_seed(args)
-    model = DocREModel(config, model, num_labels=args.num_labels, ablation=args.ablation, max_sen_num=args.max_sen_num, add_head=args.add_head, add_head_test=args.add_head_test)
+    model = DocREModel(config, model, num_labels=args.num_labels, ablation=args.ablation, max_sen_num=args.max_sen_num, add_head=args.add_head, add_head_test=args.add_head_test, use_combined_inference=args.use_combined_inference, num_incr_head=args.num_incr_head)
     model.to(device)
 
     if args.add_head:
@@ -535,7 +541,7 @@ def main():
             param.requires_grad = True
 
         train(args, model, train_features, dev_features, test_features, tokenizer=tokenizer, train_features_distant=train_features_distant)
-    elif args.load_path != '':
+    elif args.load_path != '':  # if args.add_head_test also falss here but not directly and use_combined_inference as well
         name = args.load_path.split('/')[1].split('.')[0].split('EIDER_')[1]
         print('Loading from', args.load_path)
         model = apex.amp.initialize(model, opt_level="O1", verbosity=0)

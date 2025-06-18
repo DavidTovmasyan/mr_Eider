@@ -27,15 +27,16 @@ def check_memory():
     return memory_usage
 
 dataset_path = 'dataset/'
-rel_mode='_incremental_241'  # TODO: Change while using
-#rel_mode = input("Please input rel_mode '' or _incremental_XXX or _pretrain_XXX: ")
+rel_mode = '_comb_sub6'
+# rel_mode = input("Please input rel_mode '' or _incremental_XXX or _pretrain_XXX: ")
 docred_rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
 id2rel = {value: key for key, value in docred_rel2id.items()}
-rel2name = json.load(open(dataset_path + 'meta/rel_info' + rel_mode + '.json', 'r')) # PXX -> name
+rel2name = json.load(open(dataset_path + 'meta/rel_info' + rel_mode + '.json', 'r'))  # PXX -> name
 cdr_rel2id = {'1:NR:2': 0, '1:CID:2': 1}
 gda_rel2id = {'1:NR:2': 0, '1:GDA:2': 1}
 
 INF = 1e8
+
 
 def chunks(l, n):
     res = []
@@ -44,13 +45,14 @@ def chunks(l, n):
         res += [l[i:i + n]]
     return res
 
+
 def min_edit_distance(s1, s2):
     if len(s1) > len(s2):
         s1, s2 = s2, s1
 
     distances = range(len(s1) + 1)
     for i2, c2 in enumerate(s2):
-        distances_ = [i2+1]
+        distances_ = [i2 + 1]
         for i1, c1 in enumerate(s1):
             if c1 == c2:
                 distances_.append(distances[i1])
@@ -58,6 +60,7 @@ def min_edit_distance(s1, s2):
                 distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
         distances = distances_
     return distances[-1]
+
 
 def find_core_ent(entities, title, sents):
     # string match
@@ -75,13 +78,13 @@ def find_core_ent(entities, title, sents):
 
     return best_eid
 
-def add_entity_markers(entities, original_sents, tokenizer):
 
+def add_entity_markers(entities, original_sents, tokenizer):
     cls_token = tokenizer.special_tokens_map['cls_token']
     # if cls: add a sep token before every sentence
 
     entity_start, entity_end = [], []
-    token2type = [['-'] * len(s) for s in original_sents ]
+    token2type = [['-'] * len(s) for s in original_sents]
     for entity in entities:
         for mention in entity:
             sent_id = mention["sent_id"]
@@ -107,7 +110,7 @@ def add_entity_markers(entities, original_sents, tokenizer):
         sen_starts.append(len(sents))
 
         for i_t, token in enumerate(sent):
-            tokens_wordpiece = tokenizer.tokenize(token) # return list(str)
+            tokens_wordpiece = tokenizer.tokenize(token)  # return list(str)
             if (i_s, i_t) in entity_start:
                 tokens_wordpiece = ["*"] + tokens_wordpiece
             if (i_s, i_t) in entity_end:
@@ -126,19 +129,22 @@ def add_entity_markers(entities, original_sents, tokenizer):
 
         sen_ends.append(len(sents))
 
-    sen_pos = [(sen_starts[i],sen_ends[i]) for i in range(len(sen_starts))]
+    sen_pos = [(sen_starts[i], sen_ends[i]) for i in range(len(sen_starts))]
 
     return sents, sent_map, sents_local, sent_map_local, sen_pos
 
-def return_feature(tmp_text, entity_pos, relations, hts, title, tokenizer, original_hts=None, sen_labels=None, sen_pos=None, max_seq_length=1024):
-    tmp_text = tmp_text[:max_seq_length - 2]
-    input_ids = tokenizer.convert_tokens_to_ids(tmp_text) # Returns the vocabulary as a dict of {token: index} pairs
-    input_ids = tokenizer.build_inputs_with_special_tokens(input_ids) # build model inputs by concatenating and adding special tokens.
 
-    feature = {'input_ids': input_ids, # sents converted by the tokenizer
-               'entity_pos': entity_pos, # the [START, END] of each mention of each entity
-               'labels': relations, # a list of relations of a pair, each is a one-hot vector
-               'hts': hts, # a list of ([h, t]) pairs
+def return_feature(tmp_text, entity_pos, relations, hts, title, tokenizer, original_hts=None, sen_labels=None,
+                   sen_pos=None, max_seq_length=1024):
+    tmp_text = tmp_text[:max_seq_length - 2]
+    input_ids = tokenizer.convert_tokens_to_ids(tmp_text)  # Returns the vocabulary as a dict of {token: index} pairs
+    input_ids = tokenizer.build_inputs_with_special_tokens(
+        input_ids)  # build model inputs by concatenating and adding special tokens.
+
+    feature = {'input_ids': input_ids,  # sents converted by the tokenizer
+               'entity_pos': entity_pos,  # the [START, END] of each mention of each entity
+               'labels': relations,  # a list of relations of a pair, each is a one-hot vector
+               'hts': hts,  # a list of ([h, t]) pairs
                'title': title,
                }
 
@@ -146,18 +152,19 @@ def return_feature(tmp_text, entity_pos, relations, hts, title, tokenizer, origi
         feature['original_hts'] = original_hts
 
     if sen_pos is not None and len(sen_pos) > 0:
-        num_pos = np.sum(np.array(relations)[:,1:].sum(axis=-1) > 0)
-        assert(num_pos == len(sen_labels))
+        num_pos = np.sum(np.array(relations)[:, 1:].sum(axis=-1) > 0)
+        assert (num_pos == len(sen_labels))
         feature['sen_labels'] = sen_labels
         feature['sen_pos'] = sen_pos
 
     return feature
 
+
 # global pos to local pos. pos in the form on [start, end]
 def find_local_pos(sents, pos, sent_id=None):
     if sent_id is None:
         cur_length = 0
-        for i,s in enumerate(sents):
+        for i, s in enumerate(sents):
             if pos[0] < cur_length + len(s):
                 sent_id = i
                 local_start = pos[0] - cur_length
@@ -170,20 +177,21 @@ def find_local_pos(sents, pos, sent_id=None):
         local_end = pos[1] - cur_length
         return sent_id, (local_start, local_end)
 
+
 def add_coref(sents, original_entities, coref_results=None, is_distant=False):
     # sents = sample['sents'],
     entities = copy.deepcopy(original_entities)
     corefs = []
 
-    coref_dict = defaultdict(list) # eid: ['name': , 'pos': , 'sent_id': ]
+    coref_dict = defaultdict(list)  # eid: ['name': , 'pos': , 'sent_id': ]
 
-    nes = [ [ ' '.join(sents[m['sent_id']][m['pos'][0]:m['pos'][1]]).lower() for m in e] for e in entities]
+    nes = [[' '.join(sents[m['sent_id']][m['pos'][0]:m['pos'][1]]).lower() for m in e] for e in entities]
     text = ' '.join([' '.join(s) for s in sents]).lower()
 
     eid2coref_tokens = defaultdict(set)
 
     eid2coref_sent_id = defaultdict(list)
-    for eid, e in enumerate( entities ):
+    for eid, e in enumerate(entities):
         eid2coref_sent_id[eid] = sorted(set([m['sent_id'] for m in e]))
 
     coref_num = 0
@@ -197,16 +205,18 @@ def add_coref(sents, original_entities, coref_results=None, is_distant=False):
         for start, end in cluster:
             sent_id = coref_results['sentence_map'][start]
             if is_distant:
-                token_ids = sorted(set(coref_results['subtoken_map'][0][start:end+1]), reverse=False)  # TODO: [0] should be removed for other exps
+                token_ids = sorted(set(coref_results['subtoken_map'][0][start:end + 1]),
+                                   reverse=False)  # TODO: [0] should be removed for other exps
             else:
-                token_ids = sorted(set(coref_results['subtoken_map'][start:end+1]), reverse=False)  # TODO: [0] should be removed for other exps
-            token = tokens[token_ids[0]:token_ids[-1]+1]
+                token_ids = sorted(set(coref_results['subtoken_map'][start:end + 1]),
+                                   reverse=False)  # TODO: [0] should be removed for other exps
+            token = tokens[token_ids[0]:token_ids[-1] + 1]
             name = ' '.join(token).lower()
 
-            sent_id, pos = find_local_pos(sents, (token_ids[0], token_ids[-1]+1), sent_id)
-            nps.append({'name': name, 'pos':pos, 'sent_id':sent_id})
+            sent_id, pos = find_local_pos(sents, (token_ids[0], token_ids[-1] + 1), sent_id)
+            nps.append({'name': name, 'pos': pos, 'sent_id': sent_id})
 
-        for eid,ne in enumerate(nes):
+        for eid, ne in enumerate(nes):
             # if len(ne.intersection(mentions)) != 0:
             if_linked = False
             for nm in ne:
@@ -225,7 +235,7 @@ def add_coref(sents, original_entities, coref_results=None, is_distant=False):
                     ent_poss = [x['pos'] for x in entities[eid]]
                     for token_id in np.arange(d['pos'][0], d['pos'][1]):
                         if d['pos'] not in ent_poss:
-                            eid2coref_tokens[eid].add( (d['sent_id'], token_id) )
+                            eid2coref_tokens[eid].add((d['sent_id'], token_id))
                     m = d['name']
                     # coref_mode == 'all':
                     if_mark = not (d['sent_id'] in eid2coref_sent_id[eid])
@@ -253,13 +263,16 @@ def add_coref(sents, original_entities, coref_results=None, is_distant=False):
 
     return entities, corefs, coref_num, eid2coref_co_occur, eid2coref_tokens
 
+
 def get_surface_name(sents, m):
     name = []
     for i in range(m['pos'][0], m['pos'][1]):
         name.append(sents[m['sent_id']][i])
     return name
 
-def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, sent_map_local, train_triple, eid2coref_co_occur, tokenizer):
+
+def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, sent_map_local, train_triple,
+                       eid2coref_co_occur, tokenizer):
     relations, hts = [], []
     original_hts = []
 
@@ -280,12 +293,13 @@ def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, s
         for m in e:
             if m['sent_id'] not in evidence:
                 continue
-            offset = sum([len(sents_local[i]) for i in evidence if i<m['sent_id']]) # local_pos + len(previous sents in evidence)
+            offset = sum([len(sents_local[i]) for i in evidence if
+                          i < m['sent_id']])  # local_pos + len(previous sents in evidence)
             start = sent_map_local[m["sent_id"]][m["pos"][0]] + offset
             end = sent_map_local[m["sent_id"]][m["pos"][1]] + offset
             e_poss.append((start, end,))
 
-        if len(e_poss) > 0: # if the entity has at least one mention that occurs in evidence
+        if len(e_poss) > 0:  # if the entity has at least one mention that occurs in evidence
             entity_pos.append(e_poss)
             tmp_eids.append(eid)
 
@@ -302,20 +316,20 @@ def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, s
 
             if sum(relation) > 0:
                 relations.append(relation)
-                ht2hts_idx[(h0,t0)] = len(hts)
+                ht2hts_idx[(h0, t0)] = len(hts)
                 hts.append([new_h, new_t])
                 original_hts.append([h0, t0])
                 pos += 1
             else:
                 relation = [1] + [0] * (len(docred_rel2id) - 1)
                 relations.append(relation)
-                ht2hts_idx[(h0,t0)] = len(hts)
+                ht2hts_idx[(h0, t0)] = len(hts)
                 hts.append([new_h, new_t])
                 original_hts.append([h0, t0])
                 neg += 1
 
-    #assert( np.all(np.array([len(r) for r in relations]) == 97))
-    #assert(len(relations) == len(hts))
+    # assert( np.all(np.array([len(r) for r in relations]) == 97))
+    # assert(len(relations) == len(hts))
     # print(len(relations), len(tmp_eids)*(len(tmp_eids) - 1) )
     # assert len(relations) == len(tmp_eids) * (len(tmp_eids) - 1)
 
@@ -323,9 +337,9 @@ def pseudo_doc2feature(args, ablation, title, evidence, sents_local, entities, s
 
     return feature, pos, neg
 
+
 # @profile
 def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_distant=False):
-
     if args is not None:
         max_seq_length = args.max_seq_length
         coref_method = args.coref_method
@@ -343,9 +357,9 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
         ablation_or_emarker = ablation
 
         if coref_method in ['none']:
-            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + mode )
+            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + mode)
         else:
-            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + coref_method + '_' + mode )
+            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + coref_method + '_' + mode)
 
         if args.transformer_type == 'roberta':
             feature_file = feature_file + '_roberta'
@@ -354,7 +368,7 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
 
         if os.path.exists(feature_file):
             print('Feature file:', feature_file)
-            features = pickle.load( open( feature_file, "rb") )
+            features = pickle.load(open(feature_file, "rb"))
             print('Feature loaded from', feature_file)
 
             return features
@@ -379,23 +393,27 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
             coref_results = json.load(f)
 
     if ablation in ['evi_pred']:
-        evi_pred_by_doc = pickle.load(open( evi_pred_file, "rb") )
+        evi_pred_by_doc = pickle.load(open(evi_pred_file, "rb"))
 
-    for doc_id, sample in tqdm( enumerate(data), desc="Example", total=len(data)): # each doc
+    for doc_id, sample in tqdm(enumerate(data), desc="Example", total=len(data)):  # each doc
 
         # add coref to entities
         if coref_method != 'none':
             coref_result = coref_results[doc_id]
 
             # always use the original entities and sents
-            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'], sample['vertexSet'], coref_result, is_distant=is_distant)
+            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'],
+                                                                                                        sample[
+                                                                                                            'vertexSet'],
+                                                                                                        coref_result,
+                                                                                                        is_distant=is_distant)
             entities = sample['vertexSet']
             coref_count += tmp_coref_count
         else:
             entities_w_coref = entities = sample['vertexSet']
 
         eid2sent_id = {}
-        for eid, e in enumerate( entities ):
+        for eid, e in enumerate(entities):
             eid2sent_id[eid] = sorted(set([m['sent_id'] for m in e]))
 
         eid2co_occur = {}
@@ -429,7 +447,6 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                     train_triple[(label['h'], label['t'])].append(
                         {'relation': r, 'evidence': evidence})
 
-
         if ablation in ['evi_rule', 'evi_pred'] and if_inference:
             sents_set = []
             for h in range(len(entities)):
@@ -441,25 +458,26 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                     relations, hts = [], []
                     original_hts = []
                     if ablation == 'evi_pred':
-                        if sample['title'] not in evi_pred_by_doc or (h,t) not in evi_pred_by_doc[ sample['title'] ]:
+                        if sample['title'] not in evi_pred_by_doc or (h, t) not in evi_pred_by_doc[sample['title']]:
                             continue
-                        evidence = evi_pred_by_doc[ sample['title'] ][(h,t)]
-                        evidence = [x for x in evidence if x < len(sample['sents']) ]
+                        evidence = evi_pred_by_doc[sample['title']][(h, t)]
+                        evidence = [x for x in evidence if x < len(sample['sents'])]
 
                     elif ablation == 'evi_rule':
                         if len(eid2coref_co_occur[h][t]) > 0:
-                                evidence = eid2coref_co_occur[h][t]
+                            evidence = eid2coref_co_occur[h][t]
                         else:
                             evidence = []
                             bridges = []
 
-                            bridges = [x for x in eid2coref_co_occur[h] if x in eid2coref_co_occur[t] and x not in [h,t]]
+                            bridges = [x for x in eid2coref_co_occur[h] if
+                                       x in eid2coref_co_occur[t] and x not in [h, t]]
                             if len(bridges) > 0:
                                 # choose the most frequent bridge
                                 if core_eid in bridges:
                                     b = core_eid
                                 else:
-                                    b = sorted(bridges, key=lambda x:eid2freq[x], reverse=True)[0]
+                                    b = sorted(bridges, key=lambda x: eid2freq[x], reverse=True)[0]
                                 bridges = [b]
 
                             for b in bridges:
@@ -484,7 +502,9 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                     sents_set.append(evidence)
                     evidence_lengths.append(len(evidence))
 
-                    feature, pos, neg = pseudo_doc2feature(args, ablation, sample['title'], evidence, sents_local, entities, sent_map_local, train_triple, eid2coref_co_occur, tokenizer)
+                    feature, pos, neg = pseudo_doc2feature(args, ablation, sample['title'], evidence, sents_local,
+                                                           entities, sent_map_local, train_triple, eid2coref_co_occur,
+                                                           tokenizer)
                     pos_samples += pos
                     neg_samples += neg
 
@@ -493,8 +513,7 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
 
                     count += 1
 
-
-        if ablation not in ['evi_rule', 'evi_pred'] or not if_inference: # in training, add the whole document anyway..
+        if ablation not in ['evi_rule', 'evi_pred'] or not if_inference:  # in training, add the whole document anyway..
             entity_pos = []
             for e in entities:
                 entity_pos.append([])
@@ -513,9 +532,9 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                     if h == t:
                         continue
 
-                    if (h,t) in train_triple:
+                    if (h, t) in train_triple:
                         relation = [0] * len(docred_rel2id)
-                        sen_evi = np.zeros( max_sen_num, dtype=int)
+                        sen_evi = np.zeros(max_sen_num, dtype=int)
                         for mention in train_triple[h, t]:
                             relation[mention["relation"]] = 1
 
@@ -525,16 +544,17 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                                     sen_evi[i] = 1
                         elif ablation == 'eider_rule':  # Constructing evidences based on rules and corefs extracted via hoi
                             if len(eid2coref_co_occur[h][t]) > 0:
-                                    evidence = eid2coref_co_occur[h][t]
+                                evidence = eid2coref_co_occur[h][t]
                             else:
                                 evidence = []
-                                bridges = [x for x in eid2coref_co_occur[h] if x in eid2coref_co_occur[t] and x not in [h,t]]
+                                bridges = [x for x in eid2coref_co_occur[h] if
+                                           x in eid2coref_co_occur[t] and x not in [h, t]]
                                 if len(bridges) > 0:
                                     # choose the most frequent bridge
                                     if core_eid in bridges:
                                         b = core_eid
                                     else:
-                                        b = sorted(bridges, key=lambda x:eid2freq[x], reverse=True)[0]
+                                        b = sorted(bridges, key=lambda x: eid2freq[x], reverse=True)[0]
                                     evi_hb = eid2coref_co_occur[h][b]
                                     evi_bt = eid2coref_co_occur[t][b]
                                     evidence.extend(evi_hb + evi_bt)
@@ -554,14 +574,14 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                             sen_evis.append(sen_evi)
 
                         relations.append(relation)
-                        ht2hts_idx[(h,t)] = len(hts)
+                        ht2hts_idx[(h, t)] = len(hts)
                         hts.append([h, t])
                         pos_samples += 1
                     else:
                         relation = [1] + [0] * (len(docred_rel2id) - 1)
 
                         relations.append(relation)
-                        ht2hts_idx[(h,t)] = len(hts)
+                        ht2hts_idx[(h, t)] = len(hts)
                         hts.append([h, t])
                         neg_samples += 1
 
@@ -571,32 +591,31 @@ def read_docred(args, file_in, tokenizer, ablation=None, if_inference=True, is_d
                 d = eid2co_occur
 
             feature = return_feature(sents, entity_pos, relations, hts, sample['title'], tokenizer, \
-                                        sen_labels=sen_evis, \
-                                        sen_pos=sen_pos)
+                                     sen_labels=sen_evis, \
+                                     sen_pos=sen_pos)
 
             i_line += 1
             features.append(feature)
 
     print("# of documents {}.".format(i_line))
     print("# of positive examples {}.".format(pos_samples))
-    print("# of negative examples {}.".format(neg_samples)) # all entity pairs without any relations
+    print("# of negative examples {}.".format(neg_samples))  # all entity pairs without any relations
     print('# of coref detected {}'.format(coref_count))
     if len(evidence_lengths) > 0:
         print('average sent num in evidence {}'.format(np.mean(evidence_lengths)))
 
-
     if feature_path != '':
         if not os.path.exists(feature_path):
             os.makedirs(feature_path)
-            
+
         if not os.path.exists(feature_file):
             print('Saving to', feature_file)
-            pickle.dump(features, open( feature_file, "wb") )
+            pickle.dump(features, open(feature_file, "wb"))
 
     return features
 
-def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, is_distant=False):
 
+def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, is_distant=False):
     if args is not None:
         max_seq_length = args.max_seq_length
         coref_method = args.coref_method
@@ -614,9 +633,9 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
         ablation_or_emarker = ablation
 
         if coref_method in ['none']:
-            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + mode )
+            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + mode)
         else:
-            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + coref_method + '_' + mode )
+            feature_file = os.path.join(feature_path, ablation_or_emarker + '_' + coref_method + '_' + mode)
 
         if args.transformer_type == 'roberta':
             feature_file = feature_file + '_roberta'
@@ -625,7 +644,7 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
 
         if os.path.exists(feature_file):
             print('Feature file:', feature_file)
-            features = pickle.load( open( feature_file, "rb") )
+            features = pickle.load(open(feature_file, "rb"))
             print('Feature loaded from', feature_file)
 
             return features
@@ -650,23 +669,27 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
             coref_results = json.load(f)
 
     if ablation in ['evi_pred']:
-        evi_pred_by_doc = pickle.load(open( evi_pred_file, "rb") )
+        evi_pred_by_doc = pickle.load(open(evi_pred_file, "rb"))
 
-    for doc_id, sample in tqdm( enumerate(data), desc="Example: ", total=len(data)): # each doc
+    for doc_id, sample in tqdm(enumerate(data), desc="Example: ", total=len(data)):  # each doc
 
         # add coref to entities
         if coref_method != 'none':
             coref_result = coref_results[doc_id]
 
             # always use the original entities and sents
-            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'], sample['vertexSet'], coref_result, is_distant=is_distant)
+            entities_w_coref, corefs, tmp_coref_count, eid2coref_co_occur, eid2coref_tokens = add_coref(sample['sents'],
+                                                                                                        sample[
+                                                                                                            'vertexSet'],
+                                                                                                        coref_result,
+                                                                                                        is_distant=is_distant)
             entities = sample['vertexSet']
             coref_count += tmp_coref_count
         else:
             entities_w_coref = entities = sample['vertexSet']
 
         eid2sent_id = {}
-        for eid, e in enumerate( entities ):
+        for eid, e in enumerate(entities):
             eid2sent_id[eid] = sorted(set([m['sent_id'] for m in e]))
 
         eid2co_occur = {}
@@ -700,7 +723,6 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                     train_triple[(label['h'], label['t'])].append(
                         {'relation': r, 'evidence': evidence})
 
-
         if ablation in ['evi_rule', 'evi_pred'] and if_inference:
             sents_set = []
             for h in range(len(entities)):
@@ -712,25 +734,26 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                     relations, hts = [], []
                     original_hts = []
                     if ablation == 'evi_pred':
-                        if sample['title'] not in evi_pred_by_doc or (h,t) not in evi_pred_by_doc[ sample['title'] ]:
+                        if sample['title'] not in evi_pred_by_doc or (h, t) not in evi_pred_by_doc[sample['title']]:
                             continue
-                        evidence = evi_pred_by_doc[ sample['title'] ][(h,t)]
-                        evidence = [x for x in evidence if x < len(sample['sents']) ]
+                        evidence = evi_pred_by_doc[sample['title']][(h, t)]
+                        evidence = [x for x in evidence if x < len(sample['sents'])]
 
                     elif ablation == 'evi_rule':
                         if len(eid2coref_co_occur[h][t]) > 0:
-                                evidence = eid2coref_co_occur[h][t]
+                            evidence = eid2coref_co_occur[h][t]
                         else:
                             evidence = []
                             bridges = []
 
-                            bridges = [x for x in eid2coref_co_occur[h] if x in eid2coref_co_occur[t] and x not in [h,t]]
+                            bridges = [x for x in eid2coref_co_occur[h] if
+                                       x in eid2coref_co_occur[t] and x not in [h, t]]
                             if len(bridges) > 0:
                                 # choose the most frequent bridge
                                 if core_eid in bridges:
                                     b = core_eid
                                 else:
-                                    b = sorted(bridges, key=lambda x:eid2freq[x], reverse=True)[0]
+                                    b = sorted(bridges, key=lambda x: eid2freq[x], reverse=True)[0]
                                 bridges = [b]
 
                             for b in bridges:
@@ -755,7 +778,9 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                     sents_set.append(evidence)
                     evidence_lengths.append(len(evidence))
 
-                    feature, pos, neg = pseudo_doc2feature(args, ablation, sample['title'], evidence, sents_local, entities, sent_map_local, train_triple, eid2coref_co_occur, tokenizer)
+                    feature, pos, neg = pseudo_doc2feature(args, ablation, sample['title'], evidence, sents_local,
+                                                           entities, sent_map_local, train_triple, eid2coref_co_occur,
+                                                           tokenizer)
                     pos_samples += pos
                     neg_samples += neg
 
@@ -764,8 +789,7 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
 
                     count += 1
 
-
-        if ablation not in ['evi_rule', 'evi_pred'] or not if_inference: # in training, add the whole document anyway..
+        if ablation not in ['evi_rule', 'evi_pred'] or not if_inference:  # in training, add the whole document anyway..
             entity_pos = []
             for e in entities:
                 entity_pos.append([])
@@ -784,9 +808,9 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                     if h == t:
                         continue
 
-                    if (h,t) in train_triple:
+                    if (h, t) in train_triple:
                         relation = [0] * len(docred_rel2id)
-                        sen_evi = np.zeros( max_sen_num, dtype=int)
+                        sen_evi = np.zeros(max_sen_num, dtype=int)
                         for mention in train_triple[h, t]:
                             relation[mention["relation"]] = 1
 
@@ -796,16 +820,17 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                                     sen_evi[i] = 1
                         elif ablation == 'eider_rule':  # Constructing evidences based on rules and corefs extracted via hoi
                             if len(eid2coref_co_occur[h][t]) > 0:
-                                    evidence = eid2coref_co_occur[h][t]
+                                evidence = eid2coref_co_occur[h][t]
                             else:
                                 evidence = []
-                                bridges = [x for x in eid2coref_co_occur[h] if x in eid2coref_co_occur[t] and x not in [h,t]]
+                                bridges = [x for x in eid2coref_co_occur[h] if
+                                           x in eid2coref_co_occur[t] and x not in [h, t]]
                                 if len(bridges) > 0:
                                     # choose the most frequent bridge
                                     if core_eid in bridges:
                                         b = core_eid
                                     else:
-                                        b = sorted(bridges, key=lambda x:eid2freq[x], reverse=True)[0]
+                                        b = sorted(bridges, key=lambda x: eid2freq[x], reverse=True)[0]
                                     evi_hb = eid2coref_co_occur[h][b]
                                     evi_bt = eid2coref_co_occur[t][b]
                                     evidence.extend(evi_hb + evi_bt)
@@ -825,14 +850,14 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                             sen_evis.append(sen_evi)
 
                         relations.append(relation)
-                        ht2hts_idx[(h,t)] = len(hts)
+                        ht2hts_idx[(h, t)] = len(hts)
                         hts.append([h, t])
                         pos_samples += 1
                     else:
                         relation = [1] + [0] * (len(docred_rel2id) - 1)
 
                         relations.append(relation)
-                        ht2hts_idx[(h,t)] = len(hts)
+                        ht2hts_idx[(h, t)] = len(hts)
                         hts.append([h, t])
                         neg_samples += 1
 
@@ -849,7 +874,8 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
                 print("Memory limit exceeded! Terminating the process.")
                 sys.exit(1)  # Exit with an error code
 
-            yield return_feature(sents, entity_pos, relations, hts, sample['title'], tokenizer, sen_labels=sen_evis, sen_pos=sen_pos)
+            yield return_feature(sents, entity_pos, relations, hts, sample['title'], tokenizer, sen_labels=sen_evis,
+                                 sen_pos=sen_pos)
             # feature = return_feature(sents, entity_pos, relations, hts, sample['title'], tokenizer, \
             #                             sen_labels=sen_evis, \
             #                             sen_pos=sen_pos)
@@ -864,11 +890,10 @@ def read_docred_gen(args, file_in, tokenizer, ablation=None, if_inference=True, 
     # if len(evidence_lengths) > 0:
     #     print('average sent num in evidence {}'.format(np.mean(evidence_lengths)))
 
-
     # if feature_path != '':
     #     if not os.path.exists(feature_path):
     #         os.makedirs(feature_path)
-            
+
     #     if not os.path.exists(feature_file):
     #         print('Saving to', feature_file)
     #         pickle.dump(features, open( feature_file, "wb") )

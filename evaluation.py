@@ -10,7 +10,7 @@ from IPython import embed
 from tqdm import tqdm
 
 dataset_path = 'dataset/'
-rel_mode='_incremental_241'  # TODO: Change while using
+rel_mode='_comb_sub6'
 #rel_mode = input("Please input rel mode '' or _incremental_XXX or _pretrain_XXX")
 rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
 id2rel = {value: key for key, value in rel2id.items()}
@@ -309,7 +309,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     fact_in_train_distant = gen_train_facts(os.path.join(path, "train_distant.json"), truth_dir)
 
     if mode == 'dev':
-        truth = json.load(open(os.path.join(path, "cil/dev" + rel_mode + ".json")))  # TODO: Change while using
+        truth = json.load(open(os.path.join(path, "cil_sub6/dev" + rel_mode + ".json")))
     elif mode == 'train':
         truth = json.load(open(os.path.join(path, "train_annotated.json")))
 
