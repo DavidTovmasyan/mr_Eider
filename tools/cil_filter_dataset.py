@@ -1,42 +1,10 @@
 import json
 from typing import Iterable
 import argparse
+import os
+from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
+import numpy as np
 
-
-# def get_filtered_dataset(input_file_path: str, to_be_extracted: Iterable[list], output_file_path: str):
-#     with open(input_file_path, "r") as f:
-#         data = json.load(f)
-
-#     print(f"The input file size is: {len(data)}.\n")
-
-#     for i in range(len(data)):
-#         new_labels = filter(lambda d: d["r"] not in to_be_extracted, data[i]["labels"])
-#         data[i]["labels"] = list(new_labels)
-
-#     with open(output_file_path, "w") as f:
-#         json.dump(data, f)
-
-#     print(f"Filtration was successfull! Results are saved in {output_file_path}")
-
-# def get_relations(rel_info_path: str):
-#     with open(rel_info_path, "r") as f:
-#         rels = json.load(f)
-#     print("Filter relations were gotten successfully!")
-#     return rels
-
-# def get_incremental_dataset(input_file_path: str, to_be_incremented: str, output_file_path: str):
-#     with open(input_file_path, "r") as f:
-#         data = json.load(f)
-
-#     print(f"The input file size is: {len(data)}.\n")
-#     for i in range(len(data)):
-#         new_labels = filter(lambda d: d["r"] == to_be_incremented, data[i]["labels"])
-#         data[i]["labels"] = list(new_labels)
-
-#     with open(output_file_path, "w") as f:
-#         json.dump(data, f)
-
-#     print(f"Filtration was successfull! Results are saved in {output_file_path}")
 
 def filter_dataset(input_file: str, output_file_pretrain: str, output_file_incremental: str,
                    extractable_rel_id: Iterable[str]) -> None:
@@ -159,6 +127,61 @@ def filter_sample(sample: dict, ext_id: Iterable[str], preserve=True):
     return new_sample
 
 
+def divide_uniformly(file_in: str, file_out_1: str, file_out_2: str, extractable: Iterable[str], scale: float = 0.1):
+    # Load the dataset
+    with open(file_in) as f:
+        dataset = json.load(f)
+    print(f"{file_in} has been loaded successfully!")
+
+    # Step 1: Build relation vocab
+    relation_types = set()
+    for doc in dataset:
+        for label in doc.get('labels', []):
+            relation_types.add(label['r'])
+    relation2id = {r: i for i, r in enumerate(sorted(relation_types))}
+    num_relations = len(relation2id)
+
+    # Step 2: Build multi-hot matrix
+    X = np.arange(len(dataset))[:, None]
+    Y = np.zeros((len(dataset), num_relations), dtype=int)
+
+    for i, doc in enumerate(dataset):
+        for label in doc.get('labels', []):
+            Y[i, relation2id[label['r']]] = 1
+
+    # Step 3: Split using iterative stratification
+    msss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=scale, random_state=42)
+    X_1, X_2 = next(msss.split(X, Y))
+
+    # Step 4: Extract samples
+    set_1, set_2 = [], []
+
+    for i, sample in enumerate(dataset):
+        new_sample = {}
+        if i in X_1:
+            for k, v in sample.items():
+                if k != "labels":
+                    new_sample[k] = v
+                else:
+                    new_sample[k] = [d for d in v if d["r"] not in extractable]
+            set_1.append(new_sample)
+        else:
+            for k, v in sample.items():
+                if k != "labels":
+                    new_sample[k] = v
+                else:
+                    new_sample[k] = [d for d in v if d["r"] in extractable]
+            set_2.append(new_sample)
+
+    # Step 5: Save or return
+    with open(file_out_1, 'w') as f:
+        json.dump(set_1, f)
+    print(f"{file_out_1} has been dumped successfully!")
+    with open(file_out_2, 'w') as f:
+        json.dump(set_2, f)
+    print(f"{file_out_2} has been dumped successfully!")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_f", default="", type=str)
@@ -168,6 +191,8 @@ def main():
     parser.add_argument("--coref_mode", default=False, type=bool)
     parser.add_argument("--coref_file", default="", type=str)
     parser.add_argument("--supplementary", default=False, type=bool)
+    parser.add_argument("--uniformly", default=False, type=bool)
+    parser.add_argument("--scale", default=0.1, type=float)
     args = parser.parse_args()
 
     if args.coref_mode:
@@ -175,7 +200,9 @@ def main():
                       args.coref_file)
     elif args.supplementary:
         filter_supplementary(args.input_f, args.output_f_pretrain, args.output_f_incremental, args.extractable_rel_id)
-    else:
+    elif args.uniformly:
+        divide_uniformly(args.input_f, args.output_f_pretrain, args.output_f_incremental, args.extractable_rel_id, scale=args.scale)
+    else:  # Extract mode
         filter_dataset(args.input_f, args.output_f_pretrain, args.output_f_incremental, args.extractable_rel_id)
 
 
