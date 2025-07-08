@@ -326,6 +326,9 @@ def report(args, model, features, features2=None, thresh=None):
                     topks.append(topk)
                 else:
                     pred, *_ = model(**inputs)
+            pred = pred.cpu().numpy()
+            pred[np.isnan(pred)] = 0
+            preds.append(pred)
 
     preds = np.concatenate(preds, axis=0).astype(np.float32)
     if len(sen_preds) > 0:

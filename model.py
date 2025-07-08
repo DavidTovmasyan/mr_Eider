@@ -31,18 +31,17 @@ class DocREModel(nn.Module):
         self.add_head = add_head
         self.add_head_test = add_head_test
         self.use_combined_inference = use_combined_inference
-        num_head = 97 - config.num_labels + 1 if self.add_head or self.add_head_test else config.num_labels
-
+        num_head = config.num_labels  # number of relations
         if self.ablation in ['eider', 'eider_rule']:
             self.b_hid_size = b_hid_size
-            self.sr_bilinear = nn.Linear(config.hidden_size * block_size, num_head - num_incr_head)
+            self.sr_bilinear = nn.Linear(config.hidden_size * block_size, num_head)
 
         extractor_input_size = 2 * config.hidden_size
 
         self.head_extractor = nn.Linear(extractor_input_size, emb_size)
         self.tail_extractor = nn.Linear(extractor_input_size, emb_size)
 
-        self.bilinear = nn.Linear(emb_size * block_size, num_head - num_incr_head)
+        self.bilinear = nn.Linear(emb_size * block_size, num_head)
 
         self.emb_size = emb_size
         self.block_size = block_size
@@ -50,11 +49,11 @@ class DocREModel(nn.Module):
         self.num_rels = output_size
 
         if self.add_head or self.add_head_test:
-            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, output_size)
-            self.new_classifier = nn.Linear(emb_size * block_size, output_size)
+            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, num_incr_head)
+            self.new_classifier = nn.Linear(emb_size * block_size, num_incr_head)
         elif self.use_combined_inference:
-            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, num_incr_head + 1)
-            self.new_classifier = nn.Linear(emb_size * block_size, num_incr_head + 1)
+            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, num_incr_head)
+            self.new_classifier = nn.Linear(emb_size * block_size, num_incr_head)
 
     def encode(self, input_ids, attention_mask):
         config = self.config
@@ -64,7 +63,8 @@ class DocREModel(nn.Module):
         elif config.transformer_type == "roberta":
             start_tokens = [config.cls_token_id]
             end_tokens = [config.sep_token_id, config.sep_token_id]
-        sequence_output, attention, sentence_cls = process_long_input(self.model, input_ids, attention_mask, start_tokens, end_tokens)
+        sequence_output, attention, sentence_cls = process_long_input(self.model, input_ids, attention_mask,
+                                                                      start_tokens, end_tokens)
         return sequence_output, attention, sentence_cls
 
     def get_hrt(self, sequence_output, attention, entity_pos, hts, sen_poss=None):
@@ -74,9 +74,9 @@ class DocREModel(nn.Module):
 
         sss, sss_simple = [], []
 
-        for i in range(len(entity_pos)): # for i in batch_size
+        for i in range(len(entity_pos)):  # for i in batch_size
             entity_embs, entity_atts = [], []
-            for eid,e in enumerate(entity_pos[i]):
+            for eid, e in enumerate(entity_pos[i]):
 
                 if len(e) > 1:
                     e_emb, e_att = [], []
@@ -89,10 +89,10 @@ class DocREModel(nn.Module):
                     if len(e_emb) > 0:
                         m_num = len(e_emb)
                         e_emb = torch.stack(e_emb, dim=0)
-                        e_emb = torch.logsumexp(e_emb, dim=0) # take the average here
+                        e_emb = torch.logsumexp(e_emb, dim=0)  # take the average here
 
                         e_att = torch.stack(e_att, dim=0)
-                        e_att = e_att.mean(0) # (h, seq_len) take average on att anyway..
+                        e_att = e_att.mean(0)  # (h, seq_len) take average on att anyway..
                     else:
                         e_emb = torch.zeros(self.config.hidden_size).to(sequence_output)
                         e_att = torch.zeros(h, c).to(attention)
@@ -110,8 +110,10 @@ class DocREModel(nn.Module):
 
             if sen_poss is not None:
                 # logsumexp:
-                ss = [torch.logsumexp(sequence_output[i, sen_pos[0]+offset:sen_pos[1]+offset, :], dim=0).unsqueeze(0) for sen_pos in sen_poss[i] if sen_pos[0]+offset < c]
-                ss = torch.cat(ss, dim=0).to(sequence_output.device) # [sen_num, emb_size]
+                ss = [
+                    torch.logsumexp(sequence_output[i, sen_pos[0] + offset:sen_pos[1] + offset, :], dim=0).unsqueeze(0)
+                    for sen_pos in sen_poss[i] if sen_pos[0] + offset < c]
+                ss = torch.cat(ss, dim=0).to(sequence_output.device)  # [sen_num, emb_size]
                 # padding ss to [max_sen_num, emb_size]
                 pad = nn.ZeroPad2d((0, 0, 0, self.max_sen_num - ss.shape[0]))
                 ss = pad(ss)
@@ -123,28 +125,28 @@ class DocREModel(nn.Module):
             entity_embs = torch.stack(entity_embs, dim=0)  # [n_e, d] OR [n_e, k, d]
             entity_atts = torch.stack(entity_atts, dim=0)  # [n_e, h, seq_len]
 
-            ht_i = torch.LongTensor(hts[i]).to(sequence_output.device) # (n_p, 2)
-            hs = torch.index_select(entity_embs, 0, ht_i[:, 0]) # [n_p, d] OR [n_p, k, d]
-            ts = torch.index_select(entity_embs, 0, ht_i[:, 1]) # [n_p, d] OR [n_p, k, d]
+            ht_i = torch.LongTensor(hts[i]).to(sequence_output.device)  # (n_p, 2)
+            hs = torch.index_select(entity_embs, 0, ht_i[:, 0])  # [n_p, d] OR [n_p, k, d]
+            ts = torch.index_select(entity_embs, 0, ht_i[:, 1])  # [n_p, d] OR [n_p, k, d]
 
-            h_att = torch.index_select(entity_atts, 0, ht_i[:, 0]) # (n_p, h, seq_len)
-            t_att = torch.index_select(entity_atts, 0, ht_i[:, 1]) # (n_p, h, seq_len)
-            ht_att = (h_att * t_att).mean(1) # average on all heads # (n_p, seq_len)
-            ht_att = ht_att / (ht_att.sum(1, keepdim=True) + 1e-5) # average over seq_len
+            h_att = torch.index_select(entity_atts, 0, ht_i[:, 0])  # (n_p, h, seq_len)
+            t_att = torch.index_select(entity_atts, 0, ht_i[:, 1])  # (n_p, h, seq_len)
+            ht_att = (h_att * t_att).mean(1)  # average on all heads # (n_p, seq_len)
+            ht_att = ht_att / (ht_att.sum(1, keepdim=True) + 1e-5)  # average over seq_len
 
-            rs = contract("ld,rl->rd", sequence_output[i], ht_att) # (seq_len, d), (n_p, seq_len) -> [n_p, d]
+            rs = contract("ld,rl->rd", sequence_output[i], ht_att)  # (seq_len, d), (n_p, seq_len) -> [n_p, d]
 
             hss.append(hs)
             tss.append(ts)
             rss.append(rs)
 
-        hss = torch.cat(hss, dim=0) # [bs * n_p, d] OR [bs * n_p, num_labels, d]
+        hss = torch.cat(hss, dim=0)  # [bs * n_p, d] OR [bs * n_p, num_labels, d]
         tss = torch.cat(tss, dim=0)
         rss = torch.cat(rss, dim=0)
 
-        if len(sss)>0:
-            sss = torch.cat(sss, dim=0) # [bs * n_p, num_sents, d]
-            sss_simple = torch.cat(sss_simple, dim=0) # [bs, num_sents, d]
+        if len(sss) > 0:
+            sss = torch.cat(sss, dim=0)  # [bs * n_p, num_sents, d]
+            sss_simple = torch.cat(sss_simple, dim=0)  # [bs, num_sents, d]
 
         return hss, rss, tss, sss, sss_simple
 
@@ -168,20 +170,22 @@ class DocREModel(nn.Module):
             embed()
 
         hs, rs, ts, \
-        ss, ss_simple = self.get_hrt(sequence_output, attention, entity_pos, hts, \
-                                                sen_poss=sen_pos)
+            ss, ss_simple = self.get_hrt(sequence_output, attention, entity_pos, hts, \
+                                         sen_poss=sen_pos)
 
-        hs = torch.cat([hs, rs], dim=-1) # hs, rs: input: [bs * n_p, d] OR [bs * n_p, num_labels, d]
-        ts = torch.cat([ts, rs], dim=-1) # output: [bs * n_p, emb_size] OR [bs * n_p, num_labels, emb_size]
+        hs = torch.cat([hs, rs], dim=-1)  # hs, rs: input: [bs * n_p, d] OR [bs * n_p, num_labels, d]
+        ts = torch.cat([ts, rs], dim=-1)  # output: [bs * n_p, emb_size] OR [bs * n_p, num_labels, emb_size]
 
-        hs = torch.tanh(torch.tanh(self.head_extractor(hs))) # hs, rs: input: [bs * n_p, d] OR [bs * n_p, num_labels, d]
-        ts = torch.tanh(self.tail_extractor(ts)) # output: [bs * n_p, emb_size] OR [bs * n_p, num_labels, emb_size]
+        hs = torch.tanh(
+            torch.tanh(self.head_extractor(hs)))  # hs, rs: input: [bs * n_p, d] OR [bs * n_p, num_labels, d]
+        ts = torch.tanh(self.tail_extractor(ts))  # output: [bs * n_p, emb_size] OR [bs * n_p, num_labels, emb_size]
 
         b1 = hs.view(-1, self.emb_size // self.block_size, self.block_size)
         b2 = ts.view(-1, self.emb_size // self.block_size, self.block_size)
         # b1: [bs', bl_num, bl] -> [bs', bl_num, bl, 1]
         # b2: [bs', bl_num, 1, bl]
-        bl = (b1.unsqueeze(3) * b2.unsqueeze(2)).view(-1, self.emb_size * self.block_size) # bl: [bs * n_p, emb_size * block_size]
+        bl = (b1.unsqueeze(3) * b2.unsqueeze(2)).view(-1,
+                                                      self.emb_size * self.block_size)  # bl: [bs * n_p, emb_size * block_size]
 
         if self.use_combined_inference:
             logits_base = self.bilinear(bl)
@@ -235,12 +239,12 @@ class DocREModel(nn.Module):
             labels = [torch.tensor(label) for label in labels]
 
             if sen_labels is not None:
-                num_idx_used = [ len(torch.nonzero(label[:,1:].sum(dim=-1))) for label in labels]
+                num_idx_used = [len(torch.nonzero(label[:, 1:].sum(dim=-1))) for label in labels]
             labels = torch.cat(labels, dim=0).to(logits)
 
             loss = self.loss_fnt(logits.float(), labels.float())
 
-            if sen_labels is not None:  # 'eider'
+            if sen_labels is not None:  # and any(sen_labels) is not False: # 'eider' | if "labels" is not an empty list as well
                 s_labels = [torch.tensor(s_label) for s_label in sen_labels]  # sen_labels: list of 2d lists
                 s_labels = torch.cat(s_labels, dim=0).to(ss)  # [ps, max_sen_num]
                 idx_used = torch.nonzero(labels[:, 1:].sum(dim=-1)).view(-1)

@@ -2,8 +2,8 @@ nohup python3 train.py \
 --data_dir ./dataset/docred \
 --transformer_type bert \
 --model_name_or_path bert-base-cased \
---train_file cil_sub6/train_annotated_incremental_sub6.json \
---dev_file cil_sub6/dev_incremental_sub6.json \
+--train_file ./cil/train_annotated_incremental_241.json \
+--dev_file ./cil/dev_incremental_241.json \
 --test_file test.json \
 --train_batch_size 4 \
 --test_batch_size 8 \
@@ -14,12 +14,12 @@ nohup python3 train.py \
 --warmup_ratio 0.06 \
 --num_train_epochs 30.0 \
 --seed 66 \
---num_class 91 \
---num_incr_head 7 \
+--num_class 96 \
+--num_incr_head 2 \
 --evaluation_steps -1 \
---save_path chkpt/EIDER_bert_eider__exp_sub6_incremental__test.pt \
+--save_path chkpt/EIDER_bert_eider__exp_incremental_241__best_test.pt \
 --ablation eider \
---name _exp_sub6_incremental_ \
+--name _exp_incremental_241_ \
 --feature_path saved_features \
 --coref_method hoi \
 --eval_mode dev_only \
@@ -27,6 +27,6 @@ nohup python3 train.py \
 --ensemble_mode 2 \
 --ensemble_ablation evi_rule \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
---load_path chkpt/EIDER_bert_eider__exp_sub6_incremental__best.pt \
+--load_path chkpt/EIDER_bert_eider__exp_incremental_241__best.pt \
 --add_head_test true \
-> output__exp_sub6_incremental__test.log 2>&1
+> output__exp_incremental_241__test.log 2>&1

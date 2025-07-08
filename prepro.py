@@ -17,6 +17,7 @@ from IPython import embed
 # Define the memory limit in bytes (e.g., 10 GB)
 MEMORY_LIMIT = 10 * 1024 * 1024 * 1024  # 10 GB in bytes
 
+
 def check_memory():
     # Get the current process ID
     pid = os.getpid()
@@ -26,8 +27,10 @@ def check_memory():
     memory_usage = process.memory_info().rss
     return memory_usage
 
+
 dataset_path = 'dataset/'
-rel_mode = '_comb_sub6'
+# rel_mode=""
+rel_mode = "_redfm_sub3"
 # rel_mode = input("Please input rel_mode '' or _incremental_XXX or _pretrain_XXX: ")
 docred_rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
 id2rel = {value: key for key, value in docred_rel2id.items()}

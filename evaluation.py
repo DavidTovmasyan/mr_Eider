@@ -10,8 +10,9 @@ from IPython import embed
 from tqdm import tqdm
 
 dataset_path = 'dataset/'
-rel_mode='_comb_sub6'
-#rel_mode = input("Please input rel mode '' or _incremental_XXX or _pretrain_XXX")
+rel_mode="_redfm_sub3"
+# rel_mode=""
+print("REMINDER: Do not forget to change 'rel_mode' and 'loc_path' each time (2 places in evaluation.py and 1 place in prepro.py)")
 rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
 id2rel = {value: key for key, value in rel2id.items()}
 
@@ -309,7 +310,11 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     fact_in_train_distant = gen_train_facts(os.path.join(path, "train_distant.json"), truth_dir)
 
     if mode == 'dev':
-        truth = json.load(open(os.path.join(path, "cil_sub6/dev" + rel_mode + ".json")))
+        rel_mode = "_redfm_incremental"
+        loc_path = "../redfm"
+        # rel_mode = ""
+        # loc_path = "."
+        truth = json.load(open(os.path.join(path, loc_path + "/test" + rel_mode + ".json")))
     elif mode == 'train':
         truth = json.load(open(os.path.join(path, "train_annotated.json")))
 
@@ -383,6 +388,13 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
             stdevi = std[(title, r, h_idx, t_idx)]
             correct_evidence += len(stdevi & evi)
             in_train_annotated = in_train_distant = False
+            # When converting from RedFM to DocRED it might rarely occur index error
+            if h_idx >= len(vertexSet):
+                h_idx = len(vertexSet) - 1
+                print(f"ERROR in {title} for {r}, {h_idx}")
+            if t_idx >= len(vertexSet):
+                t_idx = len(vertexSet) - 1
+                print(f"ERROR in {title} for {r}, {t_idx}")
             for n1 in vertexSet[h_idx]:
                 for n2 in vertexSet[t_idx]:
                     if (n1['name'], n2['name'], r) in fact_in_train_annotated:

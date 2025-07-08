@@ -21,10 +21,10 @@ nohup python3 train.py \
 --name _exp_sub6_pretrain_ \
 --feature_path saved_features \
 --coref_method hoi \
---eval_mode test \
+--eval_mode dev_only \
 --evi_eval_mode none \
 --ensemble_mode 2 \
 --ensemble_ablation evi_rule \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_sub6_pretrain__best.pt \
-> output__exp_sub6_pretrain__test_real.log 2>&1
+> output__exp_sub6_pretrain__test.log 2>&1

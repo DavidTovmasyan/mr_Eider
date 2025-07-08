@@ -6,3 +6,4 @@ transformers==4.30.0
 opt_einsum
 IPython
 iterative-stratification
+psutil

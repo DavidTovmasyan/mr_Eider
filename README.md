@@ -1,67 +1,154 @@
-# Eider
-Code for ACL 2022 Finding paper "[EIDER: Empowering Document-level Relation Extraction with Efficient Evidence Extraction and Inference-stage Fusion](https://arxiv.org/abs/2106.08657)"
+# REIDER: Towards Class-Incremental Document-Level Relation Extraction
 
-## Dataset
-The [DocRED](https://www.aclweb.org/anthology/P19-1074/) dataset can be downloaded following the instructions at [link](https://drive.google.com/drive/folders/1owp7ZRbrMl_s1ljIh6AvnmniLJSliV6h?usp=sharing).
-Noted that the dev.json file has been modified in Aug, 2021. The modified version contains 998 documents. We use the original version of dev.json, which contains 1000 documents.
+This repository contains the codebase for our IEEE Intelligent Systems 2025 article:  
+**"Towards Class-Incremental Document-Level Relation Extraction"**  
+by David H. Tovmasyan and V. D. Mayorov, Center of Advanced Software Technologies, Yerevan, Armenia.
 
-The expected structure of files is:
-```
-Eider
- |-- dataset
- |    |-- docred
- |    |    |-- train_annotated.json        
- |    |    |-- train_distant.json
- |    |    |-- dev.json
- |    |    |-- test.json
- |-- meta
- |    |-- rel2id.json
- ```
- 
- ## Coreference Results Required by Eider_rule
- We use [hoi](https://github.com/emorynlp/coref-hoi) as the coreference model for Eider_rule. The processed data can be found [here](https://drive.google.com/drive/folders/1xceCD96VUbqZ4-IDVICCBIpke5VlZedz?usp=sharing).
- 
- The expected structure of files is:
-```
-Eider
- |-- coref_results
- |    |-- train_annotated_coref_results.json
- |    |-- dev_coref_results.json
- |    |-- test_coref_results.json
- ```
- 
- 
- ## Training and Inference
- Train Eider-BERT on DocRED with the following commands:
- ```
- >> bash scripts/train_bert.sh eider test hoi
- >> bash scripts/test_bert.sh eider test hoi
- ```
- 
- Alternatively, you can train Eider-RoBERTa using:
- ```
- >> bash scripts/train_roberta.sh eider test hoi
- >> bash scripts/test_roberta.sh eider test hoi
- ```
- 
- The commands for Eider_rule is similar:
- ```
- >> bash scripts/train_bert.sh eider_rule test hoi # BERT
- >> bash scripts/test_bert.sh eider_rule test hoi
+We extend the EIDER framework to support **class-incremental learning** of document-level relations. Our method decouples document encoding and classification, enabling the addition of new relation types without retraining on previous data.
 
- >> bash scripts/train_roberta.sh eider_rule test hoi # RoBERTa
- >> bash scripts/test_roberta.sh eider_rule test hoi
- ```
- 
- ## Citation
- If you make use of this code in your work, please kindly cite the following paper:
+Paper: [IEEE Xplore (forthcoming)](https://ieeexplore.ieee.org/)  
+Code: [GitHub Repository](https://github.com/DavidTovmasyan/mr_Eider)
+
+---
+
+## 🔍 Overview
+
+Most existing DocRE models assume a fixed set of relation types. In contrast, we simulate a realistic scenario where **new relation types and documents arrive over time**, and demonstrate how to:
+
+- Pretrain on large-scale silver (distantly supervised) data.
+- Fine-tune using gold (annotated) data.
+- Add new relation types via **plug-in classification heads** without retraining the encoder.
+- Avoid catastrophic forgetting using frozen feature extractors.
+- Apply **“no relation” class fusion during inference**.
+
+We evaluate our approach across multiple training configurations using DocRED and RedFM datasets.
+(For dataset and coreference splitting/filtration and datasets themselves information please check ./tools)
+---
+
+## 📁 Dataset Setup
+
+We use the [DocRED](https://www.aclweb.org/anthology/P19-1074/) dataset for both supervised (gold) and distantly supervised (silver) training.  
+We additionally include relation types and documents from the [RedFM](https://aclanthology.org/2023.acl-long.630/) dataset for incremental learning.
+
+### Required Structure
 ```
-@inproceedings{xie2021eider,
-      title={EIDER: Empowering Document-level Relation Extraction with Efficient Evidence Extraction and Inference-stage Fusion}, 
-      author={Yiqing Xie and Jiaming Shen and Sha Li and Yuning Mao and Jiawei Han},
-      year={2022},
-      booktitle = {Findings of the 60th Annual Meeting of the Association for Computational Linguistics},
-      publisher = {Association for Computational Linguistics},
+REIDER/
+ ├── dataset/
+ │   └── docred/
+ │       ├── train_annotated.json
+ │       ├── train_distant.json
+ │       ├── dev.json
+ │       ├── test.json
+ │
+ ├── redfm/
+ │   └── redfm_incremental.json
+ │
+ ├── meta/
+ │   └── rel2id.json
+```
+
+We use the **original `dev.json` (1000 documents)** as our validation set.
+
+---
+
+## 🔁 Coreference Resolution for Silver Evidence
+
+We replace the original HOI model with **[Maverick-Coref](https://aclanthology.org/2024.acl-long.1033/)**, a more accurate coreference resolution system, for generating silver evidence. Coreference results must be stored as:
+
+```
+REIDER/
+ └── coref_results/
+     ├── train_distant_coref.json
+     ├── train_annotated_coref.json
+     ├── dev_coref.json
+     └── test_coref.json
+```
+
+---
+
+## 🚀 Training & Inference
+
+### Pretraining with Silver + Fine-tuning with Gold
+```bash
+bash scripts/train_bert.sh reider_pretrain gold_train maverick
+bash scripts/test_bert.sh reider_pretrain dev maverick
+```
+
+### Incremental Learning with New Relation Types
+```bash
+bash scripts/train_incremental.sh reider_incremental base maverick
+bash scripts/fine_tune_new_heads.sh reider_incremental incremental maverick
+```
+
+### Combined Inference with “No Relation” Class Fusion
+```bash
+bash scripts/combined_inference.sh reider_combined
+```
+
+---
+
+## ⚙️ Experimental Scenarios
+
+We simulate class-incremental learning through multiple data partitioning strategies:
+
+1. **Extraction-based Splitting:** Select documents containing new relation types for incremental training.
+2. **Uniform Splitting:** Uniformly divide the data, removing base/incremental type overlaps.
+3. **Supplementary Annotation Simulation:** Simulate re-annotation of the same documents for new types.
+
+---
+
+## 🧪 Model Variants
+
+| Model                         | Description |
+|------------------------------|-------------|
+| `REIDER Base`                | Trained on base types only |
+| `REIDER Head`                | New head trained on incremental types |
+| `REIDER Combined`            | Combined inference with fusion |
+| `REIDER Pretrain`            | Pretrained on silver data |
+| `REIDER Pretrain RoBERTa`    | Pretraining with RoBERTa-large |
+| `REIDER RedFM`               | Incremental learning using RedFM types |
+
+See the paper for full experimental results.
+
+---
+
+## 📊 Results
+
+Our method demonstrates:
+
+- **66.60%** F1 score with silver+gold pretraining and RoBERTa
+- Strong performance under **incremental learning without forgetting**
+- Effective incorporation of **external relation types (RedFM)**
+
+Refer to Table 1 in the paper for a full breakdown.
+
+---
+
+## 🧾 Citation
+
+If you use this code, please cite:
+
+```
+@article{tovmasyan2025reider,
+  title={Towards Class-Incremental Document-Level Relation Extraction},
+  author={Tovmasyan, David H. and Mayorov, V. D.},
+  journal={IEEE Intelligent Systems},
+  year={2025},
+  publisher={IEEE}
 }
 ```
- 
+
+---
+
+## 📬 Contact
+
+For questions or contributions, please contact [David Tovmasyan](https://github.com/DavidTovmasyan).
+
+---
+
+## 🔗 Acknowledgements
+
+This repository builds upon:
+- [EIDER (ACL 2022 Findings)](https://arxiv.org/abs/2106.08657)
+- [ATLOP (AAAI 2021)](https://arxiv.org/abs/2010.11304)
+- [RedFM Dataset (ACL 2023)](https://aclanthology.org/2023.acl-long.630/)

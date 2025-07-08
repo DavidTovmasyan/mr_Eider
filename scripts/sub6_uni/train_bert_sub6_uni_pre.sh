@@ -1,9 +1,9 @@
 nohup python3 train.py \
---data_dir ./dataset/docred \
+--data_dir ./dataset/docred/ \
 --transformer_type bert \
 --model_name_or_path bert-base-cased \
---train_file train_annotated.json \
---dev_file dev.json \
+--train_file ./cil_sub6_uni/train_annotated_uni_87.json \
+--dev_file ./cil_sub6_uni/dev_uni_87.json \
 --test_file test.json \
 --train_batch_size 4 \
 --test_batch_size 8 \
@@ -16,17 +16,13 @@ nohup python3 train.py \
 --seed 66 \
 --num_class 91 \
 --evaluation_steps -1 \
---save_path chkpt/EIDER_bert_eider__exp_sub6_combined__test.pt \
+--save_path chkpt/EIDER_bert_eider__exp_sub6_uni_pretrain__best.pt \
 --ablation eider \
---name _exp_sub6_combined_ \
+--name _exp_sub6_uni_pretrain_ \
 --feature_path saved_features \
 --coref_method hoi \
 --eval_mode dev_only \
 --evi_eval_mode none \
---ensemble_mode 2 \
---ensemble_ablation evi_rule \
---evi_pred_file evi_results_eider_bert-base-cased.pkl \
---load_path chkpt/EIDER_bert_eider__exp_sub6_incremental__best.pt \
---use_combined_inference true \
---num_incr_head 7 \
-> output__exp_sub6_combined__test.log 2>&1
+--ensemble_mode none \
+--ensemble_ablation none \
+> output__exp_sub6_uni_pretrain_.log 2>&1
