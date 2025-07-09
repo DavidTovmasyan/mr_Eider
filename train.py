@@ -1,15 +1,7 @@
-import sys
-import os
-import autoRun
-#autoRun.choose_gpu(retry=True, min_gpu_memory=10000, sleep_time=30)
-
 import argparse
 
-import numpy as np
 import torch
-import torch.optim as optim
 
-# from apex import amp
 import apex
 import torch.cuda
 import ujson as json
@@ -17,15 +9,15 @@ from torch.utils.data import DataLoader, IterableDataset
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers import AdamW
 from transformers.optimization import get_linear_schedule_with_warmup
+
+import evaluation
 from model import DocREModel
 from utils import set_seed, collate_fn
-from prepro import read_docred, read_docred_gen
-from evaluation import * # to_official, official_evaluate, gen_official, to_score
+from prepro import read_docred, set_rel_mode_prepro
+from evaluation import *
 import pickle
-import copy
 
 from tqdm import tqdm
-# from IPython import embed
 
 
 def train(args, model, train_features, dev_features, test_features, tokenizer=None, train_features_distant=None):
@@ -33,12 +25,16 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
         best_score = -1
 
         if distant_features is not None:
+            # Setting distant_data_size as constant as distant_features is an IterableDataset
+            # TODO: Can be changed to be passed dynamically to prevent errors
+            # Despite distant_data_size is currently used only for logging and warmup/full steps determination
             if args.add_head:
                 distant_data_size = 1589
             elif args.num_class == 96:
                 distant_data_size = 100284
             else:
                 distant_data_size = 101873
+            # Setting up the distant data loader
             train_distant_dataloader = DataLoader(distant_features, batch_size=args.train_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=True)
             total_steps_distant = int(distant_data_size//args.train_batch_size * num_pretrain_epochs // args.gradient_accumulation_steps)  # Temporary changed to constant for generator
 
@@ -57,10 +53,10 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
         for epoch in train_iterator:
             model.zero_grad()
 
-            if distant_features is not None and epoch < num_pretrain_epochs:
+            if distant_features is not None and epoch < num_pretrain_epochs:  # pretraining mode
                 train_dataloader = train_distant_dataloader
             else:
-                train_dataloader = train_dataloader_gold
+                train_dataloader = train_dataloader_gold  # main training or fine-tuning
 
             for step, batch in enumerate( tqdm(train_dataloader, desc="Step", total=(int(distant_data_size//args.train_batch_size) + 1 if distant_features is not None and epoch < num_pretrain_epochs else None)) ):
                 model.train()
@@ -100,6 +96,7 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
                         with open("dev_result_"+ args.ablation + "_" + args.name + args.ensemble_mode + '_' + args.model_name_or_path + ".json", "w") as fh:
                             json.dump(dev_pred, fh)
 
+                        # Saving the individual results
                         with open("re_ind_res_" + args.ablation + "_" + args.name + "_" + args.model_name_or_path + ".json", "w") as f:
                             json.dump(re_ind, f)
 
@@ -114,7 +111,7 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
     new_layer = ["extractor", "bilinear"]
     if args.ablation in ['eider', 'eider_rule']:
         new_layer.extend(['sr_bilinear'])
-    if args.add_head:
+    if args.add_head:  # incremental heads
         new_layer = ["new_classifier", "sr_new_classifier"]
 
     optimizer_grouped_parameters = [
@@ -122,7 +119,7 @@ def train(args, model, train_features, dev_features, test_features, tokenizer=No
         {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in new_layer)], "lr": args.grouped_learning_rate},
     ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    print("Trainable parameters:")
+    print("Trainable parameters:")  # logging trainable parameters for CIL
     for name, param in model.named_parameters():
         if param.requires_grad:
             print(name)
@@ -143,7 +140,7 @@ def evaluate(args, model, features, tokenizer=None, tag="dev", features2=None):
     preds2, scores2, topks2 = [], [], []
 
     thresh = None
-    re_ind={}
+    re_ind={}  # Individual results
 
     if args.load_path != '' and args.ensemble_mode != 'none':
         load_model = args.load_path.split('/')[1].split('.')[0]
@@ -326,7 +323,7 @@ def report(args, model, features, features2=None, thresh=None):
                     topks.append(topk)
                 else:
                     pred, *_ = model(**inputs)
-            pred = pred.cpu().numpy()
+            pred = pred.cpu().numpy()  # It seems that in this case there was omitted adding pred to preds
             pred[np.isnan(pred)] = 0
             preds.append(pred)
 
@@ -445,6 +442,7 @@ def main():
                             			help="random seed for initialization")
         parser.add_argument("--num_class", type=int, default=97,
                             			help="Number of relation types in dataset.")
+        # CIL and pretraining arguments (REIDER)
         parser.add_argument("--do_pretrain", type=bool, default=False, help="Do pretrain.")
         parser.add_argument("--silver_data_file", type=str, default="train_distant.json", help="Silver data file.")
         parser.add_argument("--num_pretrain_epochs", type=int, default=1)
@@ -452,8 +450,12 @@ def main():
         parser.add_argument("--add_head_test", default=False, type=bool)
         parser.add_argument("--use_combined_inference", default=False, type=bool)
         parser.add_argument("--num_incr_head", type=int, default=0)
+        parser.add_argument("--rel_mode", type=str, default="")
 
     args = parser.parse_args()
+    # As the dataset is not always the static docred, rel2id and data paths can vary and are passed via cli
+    evaluation.set_rel_mode(rel_value=args.rel_mode)
+    set_rel_mode_prepro(rel_value=args.rel_mode)
 
     device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
@@ -478,11 +480,13 @@ def main():
 
     train_file = os.path.join(args.data_dir, args.train_file)
     dev_file = os.path.join(args.data_dir, args.dev_file)
+
+    # Setting up DistantDataset (train_features_distant)
     train_features_distant = None
     if args.do_pretrain:
         class DistantDataset(IterableDataset):
             def __init__(self, args, file, tokenizer):
-                self.generator_fn = read_docred_gen
+                self.generator_fn = read_docred
                 self.args = args
                 self.file = file
                 self.tokenizer = tokenizer
@@ -493,7 +497,6 @@ def main():
 
         train_file_distant = os.path.join(args.data_dir, args.silver_data_file)
         train_features_distant = DistantDataset(args, train_file_distant, tokenizer)
-        # train_features_distant = read_docred_gen(args, train_file_distant, tokenizer, if_inference=False, is_distant=True)
 
     if args.load_path == '' or args.add_head:
         train_features = read(args, train_file, tokenizer, if_inference=False, ablation="eider")
@@ -530,17 +533,17 @@ def main():
     model = DocREModel(config, model, num_labels=args.num_labels, ablation=args.ablation, max_sen_num=args.max_sen_num, add_head=args.add_head, add_head_test=args.add_head_test, use_combined_inference=args.use_combined_inference, num_incr_head=args.num_incr_head)
     model.to(device)
 
-    if args.add_head:
+    if args.add_head:  # Setting up model in incremental mode, freezing base encoder with classifiers
         name = args.load_path.split('/')[1].split('.')[0].split('EIDER_')[1]
         print('Loading from', args.load_path)
         model = apex.amp.initialize(model, opt_level="O1", verbosity=0)
         missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.load_path), strict=False)
         print("Missing keys:", missing_keys)
         print("Unexpected keys:", unexpected_keys)
-        for param in model.parameters():
+        for param in model.parameters():  # Freezing all the parameters
             param.requires_grad = False
 
-        for param in model.new_classifier.parameters():
+        for param in model.new_classifier.parameters():  # Unfreezing incremental parameters
             param.requires_grad = True
 
         train(args, model, train_features, dev_features, test_features, tokenizer=tokenizer, train_features_distant=train_features_distant)
@@ -559,7 +562,7 @@ def main():
 
         with open("dev_result_"+ args.name + '_' + name + '_' + args.model_name_or_path + ".json", "w") as fh:
             json.dump(dev_pred, fh)
-
+        # Saving individual results
         with open("re_ind_res_test_" + args.ablation + "_" + args.name + "_" + args.model_name_or_path + ".json", "w") as f:
             json.dump(re_ind, f)
 

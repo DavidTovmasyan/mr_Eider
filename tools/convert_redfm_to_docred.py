@@ -3,13 +3,54 @@ import argparse
 import re
 from typing import List
 
+
 def simple_sent_tokenize(text: str) -> List[str]:
+    """
+    Splits a block of text into sentences using a basic punctuation-based rule.
+
+    Sentences are split at '.', '!', or '?' followed by one or more spaces.
+
+    Args:
+        text (str): The input text to split.
+
+    Returns:
+        List[str]: A list of sentence strings.
+    """
     return re.split(r'(?<=[.!?]) +', text)
 
+
 def simple_word_tokenize(sent: str) -> List[str]:
+    """
+    Tokenizes a sentence into words and punctuation marks using regex.
+
+    This tokenizer splits on word boundaries and captures punctuation as separate tokens.
+
+    Args:
+        sent (str): The input sentence.
+
+    Returns:
+        List[str]: A list of word and punctuation tokens.
+    """
     return re.findall(r'\w+|[^\w\s]', sent)
 
+
 def convert_redfm_to_docred(input_path: str, output_path: str):
+    """
+    Converts a dataset in REDFM format to the DocRED format and saves the result.
+
+    This function processes each document by:
+    - Sentence and word tokenizing the raw text.
+    - Mapping character-level entity boundaries to token positions.
+    - Constructing the `vertexSet` (entity mentions grouped by URI).
+    - Building `labels` representing subject-predicate-object triples with evidence.
+
+    Args:
+        input_path (str): Path to the REDFM-format input JSONL file (one JSON object per line).
+        output_path (str): Path to save the converted dataset in DocRED format (JSON list).
+
+    Returns:
+        None
+    """
     with open(input_path, 'r', encoding='utf-8') as f:
         redfm_data = [json.loads(line) for line in f]
         # redfm_data = json.load(f)

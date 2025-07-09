@@ -6,15 +6,26 @@ import numpy as np
 import pickle
 from collections import defaultdict
 from difflib import get_close_matches
-from IPython import embed
 from tqdm import tqdm
 
-dataset_path = 'dataset/'
-rel_mode="_redfm_sub3"
-# rel_mode=""
-print("REMINDER: Do not forget to change 'rel_mode' and 'loc_path' each time (2 places in evaluation.py and 1 place in prepro.py)")
-rel2id = json.load(open(dataset_path + 'meta/rel2id' + rel_mode + '.json', 'r'))
-id2rel = {value: key for key, value in rel2id.items()}
+dataset_path = ""
+rel_mode = ""
+loc_path = ""
+rel2id = None
+id2rel = None
+
+
+# As the dataset is not always the static docred, rel2id and data paths can vary and are passed via cli
+def set_rel_mode(rel_value: str = "", dataset_value: str = "dataset/", loc_value: str = ""):
+    global rel_mode, dataset_path, rel2id, id2rel, loc_path
+    rel_mode = rel_value
+    dataset_path = dataset_value
+    loc_path = loc_value
+    rel2id_path = f"{dataset_path}meta/rel2id{rel_mode}.json"
+    with open(rel2id_path, 'r') as f:
+        rel2id = json.load(f)
+
+    id2rel = {v: k for k, v in rel2id.items()}
 
 def cal_f1(prec, recall):
     return (2*prec*recall)/(prec+recall)
@@ -310,11 +321,8 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     fact_in_train_distant = gen_train_facts(os.path.join(path, "train_distant.json"), truth_dir)
 
     if mode == 'dev':
-        rel_mode = "_redfm_incremental"
-        loc_path = "../redfm"
-        # rel_mode = ""
-        # loc_path = "."
-        truth = json.load(open(os.path.join(path, loc_path + "/test" + rel_mode + ".json")))
+        # As the dataset is not always the static docred, rel2id and data paths can vary and are passed via cli
+        truth = json.load(open(os.path.join(path, loc_path + "/dev" + rel_mode + ".json")))
     elif mode == 'train':
         truth = json.load(open(os.path.join(path, "train_annotated.json")))
 
@@ -323,7 +331,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     titleset = set([])
 
     title2vectexSet = {}
-    correct_re_individual = {}
+    correct_re_individual = {}  # to compute individual f1-s
 
     for x in truth:
         title = x['title']
@@ -337,6 +345,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
             h_idx = label['h']
             t_idx = label['t']
             std[(title, r, h_idx, t_idx)] = set(label['evidence'])
+            # to compute individual f1-s
             if r in correct_re_individual:
                 correct_re_individual[r]["total_true"] += 1
             else:
@@ -376,7 +385,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
         else:
             evi = set([])
         pred_evi += len(evi)
-
+        # to compute individual f1-s
         if r in correct_re_individual:
             correct_re_individual[r]["total_pred"] += 1
         else:
@@ -384,7 +393,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
 
         if (title, r, h_idx, t_idx) in std:
             correct_re += 1
-            correct_re_individual[r]["correct"] += 1
+            correct_re_individual[r]["correct"] += 1  # to compute individual f1-s
             stdevi = std[(title, r, h_idx, t_idx)]
             correct_evidence += len(stdevi & evi)
             in_train_annotated = in_train_distant = False
@@ -417,7 +426,7 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
     else:
         re_f1 = 2.0 * re_p * re_r / (re_p + re_r)
 
-    print("Evaluating individuals...")
+    print("Evaluating individuals...")  # to compute individual f1-s
     for rel_name, rel_info in correct_re_individual.items():
         if rel_info["total_pred"] != 0:
             rel_info["precision"] = 1.0 * rel_info["correct"] / rel_info["total_pred"]
@@ -431,7 +440,6 @@ def official_evaluate(tmp, path, tot_rel = -1, mode='dev'):
             rel_info["f1"] = 2.0 * rel_info["precision"] * rel_info["recall"] / (rel_info["precision"] + rel_info["recall"])
         else:
             rel_info["f1"] = 0
-    # print(correct_re_individual)
 
     evi_p = 1.0 * correct_evidence / pred_evi if pred_evi > 0 else 0
     evi_r = 1.0 * correct_evidence / tot_evidences

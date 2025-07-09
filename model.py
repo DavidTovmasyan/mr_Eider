@@ -4,11 +4,8 @@ import torch.nn.functional as F
 from opt_einsum import contract
 from long_seq import process_long_input
 from losses import ATLoss
-import math
 
 from IPython import embed
-import numpy as np
-from torch.nn.parameter import Parameter
 
 INF = 1e8
 
@@ -16,7 +13,7 @@ INF = 1e8
 class DocREModel(nn.Module):
     def __init__(self, config, model, ablation='atlop', max_sen_num=25, emb_size=768, block_size=64, num_labels=-1,
                  att_size=128, b_hid_size=194, add_head=False, add_head_test=False, use_combined_inference=False,
-                 num_incr_head=0):
+                 num_incr_head=0):  # added cil and combined inference arguments
         super().__init__()
         self.config = config
         self.model = model
@@ -27,7 +24,7 @@ class DocREModel(nn.Module):
 
         self.max_sen_num = max_sen_num
         self.ablation = ablation
-
+        # for cil and combined inference
         self.add_head = add_head
         self.add_head_test = add_head_test
         self.use_combined_inference = use_combined_inference
@@ -48,10 +45,8 @@ class DocREModel(nn.Module):
         self.num_labels = num_labels
         self.num_rels = output_size
 
-        if self.add_head or self.add_head_test:
-            self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, num_incr_head)
-            self.new_classifier = nn.Linear(emb_size * block_size, num_incr_head)
-        elif self.use_combined_inference:
+        # Setting up incremental heads | else can be set just Identity
+        if self.add_head or self.add_head_test or self.use_combined_inference:
             self.sr_new_classifier = nn.Linear(config.hidden_size * block_size, num_incr_head)
             self.new_classifier = nn.Linear(emb_size * block_size, num_incr_head)
 
@@ -186,7 +181,7 @@ class DocREModel(nn.Module):
         # b2: [bs', bl_num, 1, bl]
         bl = (b1.unsqueeze(3) * b2.unsqueeze(2)).view(-1,
                                                       self.emb_size * self.block_size)  # bl: [bs * n_p, emb_size * block_size]
-
+        # applying "no relation" label fusion technique which is discussed in the article
         if self.use_combined_inference:
             logits_base = self.bilinear(bl)
             logits_incremental = self.new_classifier(bl)
@@ -208,7 +203,7 @@ class DocREModel(nn.Module):
             final_combined_output = torch.cat([combined_na, combined_preds], dim=1)  # [batch, 97]
 
             output = (final_combined_output,)
-
+            # Dealing with raw logits. Same logic applied after normalization and taking min during fusion
             if return_score:  # Note that logits' scales may differ
                 def normalize_logits(logits):
                     min_val = logits.min(dim=1, keepdim=True)[0]
@@ -223,11 +218,10 @@ class DocREModel(nn.Module):
                 scores = self.loss_fnt.get_score(combined_logits, 5)
                 output = output + (scores[0], scores[1],)
         else:
-            if self.add_head or self.add_head_test:
+            if self.add_head or self.add_head_test:  # incremental mode/incremental heads
                 logits = self.new_classifier(bl)
-            else:
+            else:  # base mode
                 logits = self.bilinear(bl)
-            # logits = torch.cat([bilinear(bl) for bilinear in self.bilinears], dim=1)
 
             output = (self.loss_fnt.get_label(logits, num_labels=self.num_labels),)
 
@@ -243,8 +237,8 @@ class DocREModel(nn.Module):
             labels = torch.cat(labels, dim=0).to(logits)
 
             loss = self.loss_fnt(logits.float(), labels.float())
-
-            if sen_labels is not None:  # and any(sen_labels) is not False: # 'eider' | if "labels" is not an empty list as well
+            # 'eider'
+            if sen_labels is not None:  # and any(sen_labels) is not False: | check if "labels" is not an empty list for redfm
                 s_labels = [torch.tensor(s_label) for s_label in sen_labels]  # sen_labels: list of 2d lists
                 s_labels = torch.cat(s_labels, dim=0).to(ss)  # [ps, max_sen_num]
                 idx_used = torch.nonzero(labels[:, 1:].sum(dim=-1)).view(-1)
@@ -266,15 +260,14 @@ class DocREModel(nn.Module):
                 bl_sr = (s1.unsqueeze(4) * r2.unsqueeze(1).unsqueeze(3)).view(-1, self.max_sen_num,
                                                                               self.hidden_size * self.block_size)
                 # s1 -> (bs', sents_num, #bl, bl_size, 1); r2 -> (bs', 1, #bl, 1, bl_size)
-                if self.add_head or self.add_head_test:
+                if self.add_head or self.add_head_test:  # s_logits for incremental mode
                     s_logits = self.sr_new_classifier(bl_sr)
                 else:
                     s_logits = self.sr_bilinear(bl_sr)  # [bs, sents_num, num_labels]
-                # s_logits = torch.cat([sr_bilinear(bl_sr) for sr_bilinear in self.sr_bilinears], dim=2) # [bs, sents_num, num_labels]
 
                 s_logits = torch.max(s_logits, dim=-1)[0].view(-1, max_sen_num)  # choose the highest prob
                 evi_loss = F.binary_cross_entropy_with_logits(s_logits.float(), s_labels.float())
-                if not torch.isnan(evi_loss):  # TODO: Added, maybe need to remove later
+                if not torch.isnan(evi_loss):  # may cause accuracy problems (but have not encountered yet)
                     loss = loss + 0.1 * evi_loss
                 # loss = evi_loss
 

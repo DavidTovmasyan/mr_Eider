@@ -1,5 +1,4 @@
 import torch
-# from torch._six import string_classes
 import functools
 import numpy as np
 import sys
@@ -39,7 +38,7 @@ def to_type(dtype, t):
 def applier(value, fn):
     if isinstance(value, torch.Tensor):
         return fn(value)
-    elif isinstance(value, str):  # Replaced string_classes with str
+    elif isinstance(value, str):  # Replaced string_classes(outdated) with str
         return value
     elif isinstance(value, np.ndarray):
         return value

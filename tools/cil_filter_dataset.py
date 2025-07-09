@@ -1,13 +1,34 @@
 import json
 from typing import Iterable
 import argparse
-import os
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 import numpy as np
 
 
 def filter_dataset(input_file: str, output_file_pretrain: str, output_file_incremental: str,
                    extractable_rel_id: Iterable[str]) -> None:
+    """
+    Splits a dataset into two subsets based on the presence of specified relation IDs in each sample's labels,
+    and writes the subsets to separate output files.
+
+    The dataset is loaded from a JSON file where each sample contains a "labels" field with relation entries.
+    Samples containing at least one label with a relation ID (`"r"`) in `extractable_rel_id` are included in
+    the "incremental" dataset. All other samples go to the "pretrain" dataset.
+
+    Each sample is filtered using `filter_sample()`:
+        - For the incremental dataset, only labels with matching relation IDs are preserved.
+        - For the pretrain dataset, matching relation IDs are removed from the labels.
+
+    Args:
+        input_file (str): Path to the input JSON file containing the dataset.
+        output_file_pretrain (str): Path to save the filtered pretrain dataset.
+        output_file_incremental (str): Path to save the filtered incremental dataset.
+        extractable_rel_id (Iterable[str]): A collection of relation IDs used to split and filter the data.
+
+    Returns:
+        None
+    """
+
     with open(input_file, 'r') as f:
         initial_data = json.load(f)
 
@@ -41,6 +62,29 @@ def filter_dataset(input_file: str, output_file_pretrain: str, output_file_incre
 
 def filter_supplementary(input_file: str, output_file_pretrain: str, output_file_incremental: str,
                          extractable_rel_id: Iterable[str]) -> None:
+    """
+    Processes a supplementary dataset by generating two versions: one for incremental learning and one for pretraining.
+
+    The dataset is read from a JSON file where each sample contains a "labels" field.
+
+    - The **incremental dataset** includes all original samples unchanged.
+    - The **pretrain dataset** includes:
+        - A version of each sample with relation IDs in `extractable_rel_id` removed (if present in the sample).
+        - Or the original sample if none of its labels match the `extractable_rel_id`.
+
+    This ensures that the pretrain data does not contain labels intended for incremental learning,
+    while still preserving all samples for the incremental dataset.
+
+    Args:
+        input_file (str): Path to the input JSON file containing the supplementary dataset.
+        output_file_pretrain (str): Path to save the pretrain dataset (filtered if needed).
+        output_file_incremental (str): Path to save the unmodified incremental dataset.
+        extractable_rel_id (Iterable[str]): Relation IDs to be excluded from the pretrain dataset.
+
+    Returns:
+        None
+    """
+
     with open(input_file, 'r') as f:
         initial_data = json.load(f)
 
@@ -75,6 +119,30 @@ def filter_supplementary(input_file: str, output_file_pretrain: str, output_file
 
 def filter_corefs(input_file: str, output_file_pretrain: str, output_file_incremental: str,
                   extractable_rel_id: Iterable[str], coref_file: str) -> None:
+    """
+    Filters a coreference resolution dataset into pretrain and incremental subsets based on relation IDs
+    present in a separate labeled dataset.
+
+    The function uses the `input_file` (containing samples with labeled relations) to determine which samples
+    are relevant for incremental learning (i.e., they contain at least one label with a relation ID in
+    `extractable_rel_id`). This relevance is captured in a binary mask.
+
+    Then, the corresponding entries in `coref_file` (a separate coreference-annotated dataset assumed to be
+    aligned in order with `input_file`) are split into:
+    - **Incremental data**: Coref samples corresponding to samples that contain any of the `extractable_rel_id`.
+    - **Pretrain data**: Coref samples corresponding to all other samples.
+
+    Args:
+        input_file (str): Path to a JSON file containing samples with labeled relations.
+        output_file_pretrain (str): Path to save the filtered pretrain coreference dataset.
+        output_file_incremental (str): Path to save the filtered incremental coreference dataset.
+        extractable_rel_id (Iterable[str]): A collection of relation IDs used to determine relevance.
+        coref_file (str): Path to the JSON file containing coreference-annotated samples, aligned with `input_file`.
+
+    Returns:
+        None
+    """
+
     with open(input_file, 'r') as f:
         initial_data = json.load(f)
 
@@ -115,6 +183,22 @@ def filter_corefs(input_file: str, output_file_pretrain: str, output_file_increm
 
 
 def filter_sample(sample: dict, ext_id: Iterable[str], preserve=True):
+    """
+    Filters the 'labels' field of a data sample based on a set of relation IDs.
+
+    If `preserve` is True, only labels with relation IDs in `ext_id` are kept.
+    If `preserve` is False, labels with relation IDs in `ext_id` are removed.
+    All other fields in the sample are preserved unchanged.
+
+    Args:
+        sample (dict): A single data sample containing a "labels" field and other metadata.
+        ext_id (Iterable[str]): A collection of relation IDs to include or exclude.
+        preserve (bool, optional): Determines whether to keep (`True`) or remove (`False`) matching labels.
+                                   Defaults to True.
+
+    Returns:
+        dict: A new sample with the filtered labels.
+    """
     new_sample = {}
     for k, v in sample.items():
         if k != "labels":
@@ -127,7 +211,33 @@ def filter_sample(sample: dict, ext_id: Iterable[str], preserve=True):
     return new_sample
 
 
-def divide_uniformly(file_in: str, file_out_1: str, file_out_2: str, extractable: Iterable[str], scale: float = 0.1):
+def divide_uniformly(file_in: str, file_out_1: str, file_out_2: str,
+                     extractable: Iterable[str], scale: float = 0.1):
+    """
+    Splits a dataset into two subsets using iterative stratification to ensure uniform distribution
+    of relation types, and filters each subset based on extractable relation IDs.
+
+    The function reads a JSON dataset from `file_in`, where each sample contains a list of labels with
+    relation IDs (`"r"`). It builds a multi-hot label matrix to represent the presence of relation types
+    across samples, and uses `MultilabelStratifiedShuffleSplit` to divide the dataset while preserving
+    the label distribution.
+
+    After splitting:
+    - **Set 1** contains samples from the first split (`file_out_1`) with only labels **not in** `extractable`.
+    - **Set 2** contains samples from the second split (`file_out_2`) with only labels **in** `extractable`.
+
+    Args:
+        file_in (str): Path to the input JSON file containing the dataset.
+        file_out_1 (str): Path to save the first output subset (non-extractable relations only).
+        file_out_2 (str): Path to save the second output subset (extractable relations only).
+        extractable (Iterable[str]): Relation IDs used to filter each subset.
+        scale (float, optional): Proportion of the dataset to allocate to `file_out_2`.
+                                 Default is 0.1 (i.e., 10%).
+
+    Returns:
+        None
+    """
+
     # Load the dataset
     with open(file_in) as f:
         dataset = json.load(f)
