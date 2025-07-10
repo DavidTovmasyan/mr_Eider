@@ -16,6 +16,7 @@ nohup python3 train.py \
 --seed 66 \
 --num_class 96 \
 --num_incr_head 2 \
+--rel_mode _incremental_241 \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_bert_eider__exp_incremental_241__best_test.pt \
 --ablation eider \

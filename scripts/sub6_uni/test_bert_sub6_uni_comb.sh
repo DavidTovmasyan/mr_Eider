@@ -14,7 +14,8 @@ nohup python3 train.py \
 --warmup_ratio 0.06 \
 --num_train_epochs 30.0 \
 --seed 66 \
---num_class 97 \
+--num_class 91 \
+--rel_mode _comb_sub6 \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_bert_eider__exp_sub6_uni_combined__test.pt \
 --ablation eider \
@@ -28,5 +29,5 @@ nohup python3 train.py \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_sub6_uni_incremental__best.pt \
 --use_combined_inference true \
---num_incr_head 6 \
+--num_incr_head 7 \
 > output__exp_sub6_uni_combined__test.log 2>&1

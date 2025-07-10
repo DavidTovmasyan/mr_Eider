@@ -16,6 +16,7 @@ nohup python3 train.py \
 --seed 66 \
 --num_class 97 \
 --num_incr_head 4 \
+--rel_mode _redfm_sub3 \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_bert_eider_rule__exp_redfm_sub3_incremental_test__best.pt \
 --ablation eider_rule \

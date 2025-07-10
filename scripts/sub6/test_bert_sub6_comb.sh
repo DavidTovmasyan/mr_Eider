@@ -15,6 +15,7 @@ nohup python3 train.py \
 --num_train_epochs 30.0 \
 --seed 66 \
 --num_class 91 \
+--rel_mode _incremental_sub6 \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_bert_eider__exp_sub6_combined__test.pt \
 --ablation eider \

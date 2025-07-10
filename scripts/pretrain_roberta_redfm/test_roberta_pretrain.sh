@@ -22,8 +22,8 @@ nohup python train.py \
 --coref_method hoi \
 --ensemble_mode 2 \
 --ensemble_ablation evi_rule \
---eval_mode test \
+--eval_mode dev_only \
 --evi_eval_mode none \
 --evi_pred_file evi_result_eider_roberta-large.pkl \
 --load_path chkpt/EIDER_roberta_eider__exp_pretrain_2_rep__best.pt \
-> output__exp_pretrain_2_rep_test_real.log 2>&1
+> output__exp_pretrain_2_rep_test.log 2>&1

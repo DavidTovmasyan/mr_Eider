@@ -29,4 +29,5 @@ nohup python3 train.py \
 --load_path chkpt/EIDER_bert_eider__exp_incremental_241__best.pt \
 --use_combined_inference true \
 --num_incr_head 2 \
+--rel_mode _inc1_comb \
 > output__exp_inc1_combined__test.log 2>&1

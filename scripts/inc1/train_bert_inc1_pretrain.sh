@@ -1,10 +1,10 @@
 nohup python3 train.py \
---data_dir ./dataset/docred \
+--data_dir ./dataset/docred/ \
 --transformer_type bert \
 --model_name_or_path bert-base-cased \
---train_file ../redfm/train_redfm.json \
---dev_file ../redfm/dev_redfm.json \
---test_file ../redfm/test_redfm.json \
+--train_file ./cil/train_annotated_pretrain_241.json \
+--dev_file ./cil/dev_pretrain_241.json \
+--test_file test.json \
 --train_batch_size 4 \
 --test_batch_size 8 \
 --gradient_accumulation_steps 1 \
@@ -14,15 +14,17 @@ nohup python3 train.py \
 --warmup_ratio 0.06 \
 --num_train_epochs 30.0 \
 --seed 66 \
---num_class 33 \
+--num_class 96 \
+--num_incr_head 2 \
+--rel_mode _pretrain_241 \
 --evaluation_steps -1 \
---save_path chkpt/EIDER_bert_eider_rule__exp_redfm_base__best.pt \
---ablation eider_rule \
---name _exp_redfm_base_ \
+--save_path chkpt/EIDER_bert_eider__exp_pretrain_241__best.pt \
+--ablation eider \
+--name _exp_pretrain_241_ \
 --feature_path saved_features \
 --coref_method hoi \
 --eval_mode dev_only \
 --evi_eval_mode none \
 --ensemble_mode none \
 --ensemble_ablation none \
-> output__exp_redfm_base_.log 2>&1
+> output__exp_pretrain_241_.log 2>&1
