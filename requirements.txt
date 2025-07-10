@@ -7,3 +7,4 @@ opt_einsum
 IPython
 iterative-stratification
 psutil
+maverick-coref
