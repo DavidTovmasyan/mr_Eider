@@ -1,54 +1,54 @@
 {
   "P17": {
-    "f1": 0.7078344166951762,
-    "precision": 0.6665592783505154,
-    "recall": 0.7545587162654996,
+    "f1": 0.71,
+    "precision": 0.67,
+    "recall": 0.75,
     "total_pred": 3104,
     "total_true": 2742,
     "correct": 2069
   },
   "P159": {
-    "f1": 0.43589743589743585,
-    "precision": 0.4857142857142857,
-    "recall": 0.3953488372093023,
+    "f1": 0.44,
+    "precision": 0.49,
+    "recall": 0.4,
     "total_pred": 70,
     "total_true": 86,
     "correct": 34
   },
   "P127": {
-    "f1": 0.3300970873786408,
-    "precision": 0.6296296296296297,
-    "recall": 0.2236842105263158,
+    "f1": 0.33,
+    "precision": 0.63,
+    "recall": 0.22,
     "total_pred": 27,
     "total_true": 76,
     "correct": 17
   },
   "P131": {
-    "f1": 0.5883319638455218,
-    "precision": 0.5966666666666667,
-    "recall": 0.580226904376013,
+    "f1": 0.59,
+    "precision": 0.6,
+    "recall": 0.58,
     "total_pred": 1200,
     "total_true": 1234,
     "correct": 716
   },
   "P150": {
-    "f1": 0.6830092983939138,
-    "precision": 0.6953528399311532,
-    "recall": 0.6710963455149501,
+    "f1": 0.68,
+    "precision": 0.7,
+    "recall": 0.67,
     "total_pred": 581,
     "total_true": 602,
     "correct": 404
   },
   "P27": {
-    "f1": 0.6385616862988222,
-    "precision": 0.6152927120669056,
-    "recall": 0.663659793814433,
+    "f1": 0.64,
+    "precision": 0.62,
+    "recall": 0.66,
     "total_pred": 837,
     "total_true": 776,
     "correct": 515
   },
   "P749": {
-    "f1": 0.32000000000000006,
+    "f1": 0.32,
     "precision": 0.8,
     "recall": 0.2,
     "total_pred": 10,
@@ -56,241 +56,241 @@
     "correct": 8
   },
   "P571": {
-    "f1": 0.6599326599326599,
-    "precision": 0.6758620689655173,
-    "recall": 0.6447368421052632,
+    "f1": 0.66,
+    "precision": 0.68,
+    "recall": 0.64,
     "total_pred": 145,
     "total_true": 152,
     "correct": 98
   },
   "P355": {
-    "f1": 0.2222222222222222,
-    "precision": 0.5714285714285714,
-    "recall": 0.13793103448275862,
+    "f1": 0.22,
+    "precision": 0.57,
+    "recall": 0.14,
     "total_pred": 7,
     "total_true": 29,
     "correct": 4
   },
   "P30": {
-    "f1": 0.49327354260089684,
-    "precision": 0.47413793103448276,
-    "recall": 0.514018691588785,
+    "f1": 0.49,
+    "precision": 0.47,
+    "recall": 0.51,
     "total_pred": 116,
     "total_true": 107,
     "correct": 55
   },
   "P108": {
-    "f1": 0.3373493975903615,
-    "precision": 0.4375,
-    "recall": 0.27450980392156865,
+    "f1": 0.34,
+    "precision": 0.44,
+    "recall": 0.27,
     "total_pred": 32,
     "total_true": 51,
     "correct": 14
   },
   "P361": {
-    "f1": 0.4084507042253521,
-    "precision": 0.5225225225225225,
-    "recall": 0.3352601156069364,
+    "f1": 0.41,
+    "precision": 0.52,
+    "recall": 0.34,
     "total_pred": 111,
     "total_true": 173,
     "correct": 58
   },
   "P527": {
-    "f1": 0.4052287581699347,
-    "precision": 0.4732824427480916,
-    "recall": 0.35428571428571426,
+    "f1": 0.41,
+    "precision": 0.47,
+    "recall": 0.35,
     "total_pred": 131,
     "total_true": 175,
     "correct": 62
   },
   "P264": {
-    "f1": 0.6535087719298246,
-    "precision": 0.680365296803653,
-    "recall": 0.6286919831223629,
+    "f1": 0.65,
+    "precision": 0.68,
+    "recall": 0.63,
     "total_pred": 219,
     "total_true": 237,
     "correct": 149
   },
   "P175": {
-    "f1": 0.7609022556390977,
-    "precision": 0.7597597597597597,
-    "recall": 0.7620481927710844,
+    "f1": 0.76,
+    "precision": 0.76,
+    "recall": 0.76,
     "total_pred": 333,
     "total_true": 332,
     "correct": 253
   },
   "P577": {
-    "f1": 0.7883917775090689,
-    "precision": 0.7743467933491687,
-    "recall": 0.8029556650246306,
+    "f1": 0.79,
+    "precision": 0.77,
+    "recall": 0.8,
     "total_pred": 421,
     "total_true": 406,
     "correct": 326
   },
   "P19": {
-    "f1": 0.8208955223880597,
-    "precision": 0.8461538461538461,
-    "recall": 0.7971014492753623,
+    "f1": 0.82,
+    "precision": 0.85,
+    "recall": 0.8,
     "total_pred": 130,
     "total_true": 138,
     "correct": 110
   },
   "P69": {
-    "f1": 0.7368421052631579,
-    "precision": 0.6363636363636364,
-    "recall": 0.875,
+    "f1": 0.74,
+    "precision": 0.64,
+    "recall": 0.88,
     "total_pred": 121,
     "total_true": 88,
     "correct": 77
   },
   "P569": {
-    "f1": 0.9235382308845578,
-    "precision": 0.8850574712643678,
-    "recall": 0.9655172413793104,
+    "f1": 0.92,
+    "precision": 0.89,
+    "recall": 0.97,
     "total_pred": 348,
     "total_true": 319,
     "correct": 308
   },
   "P570": {
-    "f1": 0.879492600422833,
-    "precision": 0.8455284552845529,
-    "recall": 0.9162995594713657,
+    "f1": 0.88,
+    "precision": 0.85,
+    "recall": 0.92,
     "total_pred": 246,
     "total_true": 227,
     "correct": 208
   },
   "P495": {
-    "f1": 0.3609467455621302,
-    "precision": 0.46923076923076923,
-    "recall": 0.2932692307692308,
+    "f1": 0.36,
+    "precision": 0.47,
+    "recall": 0.29,
     "total_pred": 130,
     "total_true": 208,
     "correct": 61
   },
   "P176": {
-    "f1": 0.507936507936508,
-    "precision": 0.6956521739130435,
+    "f1": 0.51,
+    "precision": 0.7,
     "recall": 0.4,
     "total_pred": 23,
     "total_true": 40,
     "correct": 16
   },
   "P179": {
-    "f1": 0.5585585585585586,
-    "precision": 0.6458333333333334,
-    "recall": 0.49206349206349204,
+    "f1": 0.56,
+    "precision": 0.65,
+    "recall": 0.49,
     "total_pred": 48,
     "total_true": 63,
     "correct": 31
   },
   "P36": {
-    "f1": 0.5106382978723405,
+    "f1": 0.51,
     "precision": 0.6,
-    "recall": 0.4444444444444444,
+    "recall": 0.44,
     "total_pred": 20,
     "total_true": 27,
     "correct": 12
   },
   "P172": {
-    "f1": 0.04761904761904762,
-    "precision": 0.07692307692307693,
-    "recall": 0.034482758620689655,
+    "f1": 0.05,
+    "precision": 0.08,
+    "recall": 0.03,
     "total_pred": 13,
     "total_true": 29,
     "correct": 1
   },
   "P1376": {
     "f1": 0.5,
-    "precision": 0.5263157894736842,
-    "recall": 0.47619047619047616,
+    "precision": 0.53,
+    "recall": 0.48,
     "total_pred": 19,
     "total_true": 21,
     "correct": 10
   },
   "P37": {
-    "f1": 0.15873015873015872,
-    "precision": 0.3125,
-    "recall": 0.10638297872340426,
+    "f1": 0.16,
+    "precision": 0.31,
+    "recall": 0.11,
     "total_pred": 16,
     "total_true": 47,
     "correct": 5
   },
   "P162": {
-    "f1": 0.13114754098360654,
-    "precision": 0.36363636363636365,
+    "f1": 0.13,
+    "precision": 0.36,
     "recall": 0.08,
     "total_pred": 11,
     "total_true": 50,
     "correct": 4
   },
   "P1001": {
-    "f1": 0.5764705882352941,
-    "precision": 0.5444444444444444,
-    "recall": 0.6125,
+    "f1": 0.58,
+    "precision": 0.54,
+    "recall": 0.61,
     "total_pred": 90,
     "total_true": 80,
     "correct": 49
   },
   "P194": {
-    "f1": 0.6226415094339622,
+    "f1": 0.62,
     "precision": 0.66,
-    "recall": 0.5892857142857143,
+    "recall": 0.59,
     "total_pred": 50,
     "total_true": 56,
     "correct": 33
   },
   "P607": {
-    "f1": 0.6037735849056604,
-    "precision": 0.5517241379310345,
-    "recall": 0.6666666666666666,
+    "f1": 0.6,
+    "precision": 0.55,
+    "recall": 0.67,
     "total_pred": 58,
     "total_true": 48,
     "correct": 32
   },
   "P1336": {
-    "f1": 0.125,
-    "precision": 0.16666666666666666,
+    "f1": 0.12,
+    "precision": 0.17,
     "recall": 0.1,
     "total_pred": 6,
     "total_true": 10,
     "correct": 1
   },
   "P102": {
-    "f1": 0.7236180904522613,
-    "precision": 0.6923076923076923,
-    "recall": 0.7578947368421053,
+    "f1": 0.72,
+    "precision": 0.69,
+    "recall": 0.76,
     "total_pred": 104,
     "total_true": 95,
     "correct": 72
   },
   "P20": {
-    "f1": 0.7207207207207207,
-    "precision": 0.6557377049180327,
+    "f1": 0.72,
+    "precision": 0.66,
     "recall": 0.8,
     "total_pred": 61,
     "total_true": 50,
     "correct": 40
   },
   "P463": {
-    "f1": 0.36893203883495146,
-    "precision": 0.40860215053763443,
-    "recall": 0.336283185840708,
+    "f1": 0.37,
+    "precision": 0.41,
+    "recall": 0.34,
     "total_pred": 93,
     "total_true": 113,
     "correct": 38
   },
   "P576": {
-    "f1": 0.17857142857142858,
-    "precision": 0.29411764705882354,
-    "recall": 0.1282051282051282,
+    "f1": 0.18,
+    "precision": 0.29,
+    "recall": 0.13,
     "total_pred": 17,
     "total_true": 39,
     "correct": 5
   },
   "P206": {
-    "f1": 0.4172661870503598,
-    "precision": 0.5178571428571429,
-    "recall": 0.3493975903614458,
+    "f1": 0.42,
+    "precision": 0.52,
+    "recall": 0.35,
     "total_pred": 56,
     "total_true": 83,
     "correct": 29
@@ -304,41 +304,41 @@
     "correct": 0
   },
   "P161": {
-    "f1": 0.7318087318087317,
-    "precision": 0.6901960784313725,
-    "recall": 0.7787610619469026,
+    "f1": 0.73,
+    "precision": 0.69,
+    "recall": 0.78,
     "total_pred": 255,
     "total_true": 226,
     "correct": 176
   },
   "P54": {
-    "f1": 0.7186629526462396,
-    "precision": 0.6683937823834197,
-    "recall": 0.7771084337349398,
+    "f1": 0.72,
+    "precision": 0.67,
+    "recall": 0.78,
     "total_pred": 193,
     "total_true": 166,
     "correct": 129
   },
   "P118": {
-    "f1": 0.5833333333333334,
-    "precision": 0.546875,
-    "recall": 0.625,
+    "f1": 0.58,
+    "precision": 0.55,
+    "recall": 0.62,
     "total_pred": 64,
     "total_true": 56,
     "correct": 35
   },
   "P205": {
-    "f1": 0.4415584415584416,
-    "precision": 0.37777777777777777,
-    "recall": 0.53125,
+    "f1": 0.44,
+    "precision": 0.38,
+    "recall": 0.53,
     "total_pred": 45,
     "total_true": 32,
     "correct": 17
   },
   "P276": {
-    "f1": 0.27906976744186046,
-    "precision": 0.5714285714285714,
-    "recall": 0.18461538461538463,
+    "f1": 0.28,
+    "precision": 0.57,
+    "recall": 0.18,
     "total_pred": 21,
     "total_true": 65,
     "correct": 12
@@ -352,55 +352,55 @@
     "correct": 0
   },
   "P937": {
-    "f1": 0.23529411764705885,
-    "precision": 0.3333333333333333,
-    "recall": 0.18181818181818182,
+    "f1": 0.24,
+    "precision": 0.33,
+    "recall": 0.18,
     "total_pred": 12,
     "total_true": 22,
     "correct": 4
   },
   "P26": {
-    "f1": 0.4277456647398844,
-    "precision": 0.4065934065934066,
-    "recall": 0.45121951219512196,
+    "f1": 0.43,
+    "precision": 0.41,
+    "recall": 0.45,
     "total_pred": 91,
     "total_true": 82,
     "correct": 37
   },
   "P22": {
-    "f1": 0.467741935483871,
-    "precision": 0.43283582089552236,
-    "recall": 0.5087719298245614,
+    "f1": 0.47,
+    "precision": 0.43,
+    "recall": 0.51,
     "total_pred": 67,
     "total_true": 57,
     "correct": 29
   },
   "P40": {
-    "f1": 0.4970414201183432,
-    "precision": 0.4666666666666667,
-    "recall": 0.5316455696202531,
+    "f1": 0.5,
+    "precision": 0.47,
+    "recall": 0.53,
     "total_pred": 90,
     "total_true": 79,
     "correct": 42
   },
   "P86": {
-    "f1": 0.282051282051282,
-    "precision": 0.5238095238095238,
-    "recall": 0.19298245614035087,
+    "f1": 0.28,
+    "precision": 0.52,
+    "recall": 0.19,
     "total_pred": 21,
     "total_true": 57,
     "correct": 11
   },
   "P580": {
-    "f1": 0.3404255319148936,
-    "precision": 0.4444444444444444,
-    "recall": 0.27586206896551724,
+    "f1": 0.34,
+    "precision": 0.44,
+    "recall": 0.28,
     "total_pred": 18,
     "total_true": 29,
     "correct": 8
   },
   "P582": {
-    "f1": 0.28571428571428575,
+    "f1": 0.29,
     "precision": 0.5,
     "recall": 0.2,
     "total_pred": 8,
@@ -408,89 +408,89 @@
     "correct": 4
   },
   "P449": {
-    "f1": 0.6265060240963856,
-    "precision": 0.5909090909090909,
-    "recall": 0.6666666666666666,
+    "f1": 0.63,
+    "precision": 0.59,
+    "recall": 0.67,
     "total_pred": 44,
     "total_true": 39,
     "correct": 26
   },
   "P1344": {
-    "f1": 0.5714285714285715,
-    "precision": 0.4810126582278481,
-    "recall": 0.7037037037037037,
+    "f1": 0.57,
+    "precision": 0.48,
+    "recall": 0.7,
     "total_pred": 79,
     "total_true": 54,
     "correct": 38
   },
   "P57": {
-    "f1": 0.7526881720430108,
-    "precision": 0.7291666666666666,
-    "recall": 0.7777777777777778,
+    "f1": 0.75,
+    "precision": 0.73,
+    "recall": 0.78,
     "total_pred": 96,
     "total_true": 90,
     "correct": 70
   },
   "P58": {
-    "f1": 0.5797101449275363,
-    "precision": 0.5882352941176471,
-    "recall": 0.5714285714285714,
+    "f1": 0.58,
+    "precision": 0.59,
+    "recall": 0.57,
     "total_pred": 34,
     "total_true": 35,
     "correct": 20
   },
   "P156": {
-    "f1": 0.273972602739726,
-    "precision": 0.4166666666666667,
-    "recall": 0.20408163265306123,
+    "f1": 0.27,
+    "precision": 0.42,
+    "recall": 0.2,
     "total_pred": 24,
     "total_true": 49,
     "correct": 10
   },
   "P171": {
-    "f1": 0.33333333333333337,
-    "precision": 0.38461538461538464,
-    "recall": 0.29411764705882354,
+    "f1": 0.33,
+    "precision": 0.38,
+    "recall": 0.29,
     "total_pred": 13,
     "total_true": 17,
     "correct": 5
   },
   "P137": {
-    "f1": 0.3137254901960784,
-    "precision": 0.42105263157894735,
+    "f1": 0.31,
+    "precision": 0.42,
     "recall": 0.25,
     "total_pred": 19,
     "total_true": 32,
     "correct": 8
   },
   "P272": {
-    "f1": 0.35714285714285715,
+    "f1": 0.36,
     "precision": 0.5,
-    "recall": 0.2777777777777778,
+    "recall": 0.28,
     "total_pred": 20,
     "total_true": 36,
     "correct": 10
   },
   "P3373": {
-    "f1": 0.5304659498207885,
-    "precision": 0.5103448275862069,
-    "recall": 0.5522388059701493,
+    "f1": 0.53,
+    "precision": 0.51,
+    "recall": 0.55,
     "total_pred": 145,
     "total_true": 134,
     "correct": 74
   },
   "P1441": {
-    "f1": 0.5779816513761469,
-    "precision": 0.6176470588235294,
-    "recall": 0.5431034482758621,
+    "f1": 0.58,
+    "precision": 0.62,
+    "recall": 0.54,
     "total_pred": 102,
     "total_true": 116,
     "correct": 63
   },
   "P155": {
-    "f1": 0.2553191489361702,
-    "precision": 0.4444444444444444,
-    "recall": 0.1791044776119403,
+    "f1": 0.26,
+    "precision": 0.44,
+    "recall": 0.18,
     "total_pred": 27,
     "total_true": 67,
     "correct": 12
@@ -504,88 +504,88 @@
     "correct": 3
   },
   "P585": {
-    "f1": 0.4931506849315069,
+    "f1": 0.49,
     "precision": 0.5,
-    "recall": 0.4864864864864865,
+    "recall": 0.49,
     "total_pred": 36,
     "total_true": 37,
     "correct": 18
   },
   "P31": {
-    "f1": 0.38235294117647056,
-    "precision": 0.5909090909090909,
-    "recall": 0.2826086956521739,
+    "f1": 0.38,
+    "precision": 0.59,
+    "recall": 0.28,
     "total_pred": 22,
     "total_true": 46,
     "correct": 13
   },
   "P123": {
-    "f1": 0.5116279069767442,
+    "f1": 0.51,
     "precision": 0.55,
-    "recall": 0.4782608695652174,
+    "recall": 0.48,
     "total_pred": 60,
     "total_true": 69,
     "correct": 33
   },
   "P364": {
-    "f1": 0.45161290322580644,
-    "precision": 0.4375,
-    "recall": 0.4666666666666667,
+    "f1": 0.45,
+    "precision": 0.44,
+    "recall": 0.47,
     "total_pred": 32,
     "total_true": 30,
     "correct": 14
   },
   "P1412": {
-    "f1": 0.20512820512820512,
-    "precision": 0.25806451612903225,
-    "recall": 0.1702127659574468,
+    "f1": 0.21,
+    "precision": 0.26,
+    "recall": 0.17,
     "total_pred": 31,
     "total_true": 47,
     "correct": 8
   },
   "P35": {
-    "f1": 0.49484536082474223,
-    "precision": 0.5217391304347826,
-    "recall": 0.47058823529411764,
+    "f1": 0.49,
+    "precision": 0.52,
+    "recall": 0.47,
     "total_pred": 46,
     "total_true": 51,
     "correct": 24
   },
   "P6": {
-    "f1": 0.5309734513274337,
-    "precision": 0.42857142857142855,
-    "recall": 0.6976744186046512,
+    "f1": 0.53,
+    "precision": 0.43,
+    "recall": 0.7,
     "total_pred": 70,
     "total_true": 43,
     "correct": 30
   },
   "P166": {
-    "f1": 0.4175824175824176,
-    "precision": 0.5135135135135135,
-    "recall": 0.35185185185185186,
+    "f1": 0.42,
+    "precision": 0.51,
+    "recall": 0.35,
     "total_pred": 37,
     "total_true": 54,
     "correct": 19
   },
   "P25": {
-    "f1": 0.303030303030303,
-    "precision": 0.2777777777777778,
-    "recall": 0.3333333333333333,
+    "f1": 0.3,
+    "precision": 0.28,
+    "recall": 0.33,
     "total_pred": 18,
     "total_true": 15,
     "correct": 5
   },
   "P1056": {
-    "f1": 0.23529411764705882,
+    "f1": 0.24,
     "precision": 0.25,
-    "recall": 0.2222222222222222,
+    "recall": 0.22,
     "total_pred": 8,
     "total_true": 9,
     "correct": 2
   },
   "P178": {
-    "f1": 0.4472049689440994,
-    "precision": 0.4186046511627907,
+    "f1": 0.45,
+    "precision": 0.42,
     "recall": 0.48,
     "total_pred": 86,
     "total_true": 75,
@@ -608,17 +608,17 @@
     "correct": 0
   },
   "P674": {
-    "f1": 0.30612244897959184,
-    "precision": 0.625,
-    "recall": 0.20270270270270271,
+    "f1": 0.31,
+    "precision": 0.62,
+    "recall": 0.2,
     "total_pred": 24,
     "total_true": 74,
     "correct": 15
   },
   "P488": {
-    "f1": 0.18181818181818182,
+    "f1": 0.18,
     "precision": 0.25,
-    "recall": 0.14285714285714285,
+    "recall": 0.14,
     "total_pred": 12,
     "total_true": 21,
     "correct": 3
@@ -632,9 +632,9 @@
     "correct": 0
   },
   "P403": {
-    "f1": 0.3225806451612903,
-    "precision": 0.4166666666666667,
-    "recall": 0.2631578947368421,
+    "f1": 0.32,
+    "precision": 0.42,
+    "recall": 0.26,
     "total_pred": 24,
     "total_true": 38,
     "correct": 10
@@ -648,9 +648,9 @@
     "correct": 0
   },
   "P50": {
-    "f1": 0.6497461928934011,
-    "precision": 0.6095238095238096,
-    "recall": 0.6956521739130435,
+    "f1": 0.65,
+    "precision": 0.61,
+    "recall": 0.7,
     "total_pred": 105,
     "total_true": 92,
     "correct": 64
@@ -658,71 +658,71 @@
   "P170": {
     "f1": 0.4,
     "precision": 0.52,
-    "recall": 0.325,
+    "recall": 0.33,
     "total_pred": 25,
     "total_true": 40,
     "correct": 13
   },
   "P279": {
-    "f1": 0.049999999999999996,
+    "f1": 0.05,
     "precision": 0.25,
-    "recall": 0.027777777777777776,
+    "recall": 0.03,
     "total_pred": 4,
     "total_true": 36,
     "correct": 1
   },
   "P400": {
-    "f1": 0.6875,
-    "precision": 0.7457627118644068,
-    "recall": 0.6376811594202898,
+    "f1": 0.69,
+    "precision": 0.75,
+    "recall": 0.64,
     "total_pred": 59,
     "total_true": 69,
     "correct": 44
   },
   "P706": {
-    "f1": 0.27586206896551724,
-    "precision": 0.375,
-    "recall": 0.21818181818181817,
+    "f1": 0.28,
+    "precision": 0.38,
+    "recall": 0.22,
     "total_pred": 32,
     "total_true": 55,
     "correct": 12
   },
   "P800": {
-    "f1": 0.375,
+    "f1": 0.38,
     "precision": 0.45,
-    "recall": 0.32142857142857145,
+    "recall": 0.32,
     "total_pred": 40,
     "total_true": 56,
     "correct": 18
   },
   "P140": {
-    "f1": 0.4755244755244755,
-    "precision": 0.5483870967741935,
-    "recall": 0.41975308641975306,
+    "f1": 0.48,
+    "precision": 0.55,
+    "recall": 0.42,
     "total_pred": 62,
     "total_true": 81,
     "correct": 34
   },
   "P112": {
-    "f1": 0.44897959183673464,
+    "f1": 0.45,
     "precision": 0.5,
-    "recall": 0.4074074074074074,
+    "recall": 0.41,
     "total_pred": 22,
     "total_true": 27,
     "correct": 11
   },
   "P710": {
-    "f1": 0.5656565656565656,
-    "precision": 0.5714285714285714,
+    "f1": 0.57,
+    "precision": 0.57,
     "recall": 0.56,
     "total_pred": 49,
     "total_true": 50,
     "correct": 28
   },
   "P136": {
-    "f1": 0.35714285714285715,
-    "precision": 0.35714285714285715,
-    "recall": 0.35714285714285715,
+    "f1": 0.36,
+    "precision": 0.36,
+    "recall": 0.36,
     "total_pred": 14,
     "total_true": 14,
     "correct": 5
@@ -730,7 +730,7 @@
   "P840": {
     "f1": 0.2,
     "precision": 0.4,
-    "recall": 0.13333333333333333,
+    "recall": 0.13,
     "total_pred": 5,
     "total_true": 15,
     "correct": 2

@@ -286,9 +286,51 @@ bash scripts/pretrain_roberta_redfm/test_bert_sub6_uni_inc.sh
 # Note! In the article has been evaluated by fusing F1-s of types DocRED and RedFM
 ```
 
+### Multilingual Experiments
+**Experiment(s) from the article**:
+
+(THESE EXPERIMENTS ARE NOT INCLUDED IN THE ARTICLE)
+
+**Corresponding to the model(s)**: 
+- EIDER_bert_eider__exp_mbert__best.pt
+- EIDER_bert_eider__exp_xlm__best.pt
+- EIDER_bert_eider__exp_combined__best.pt
+- EIDER_bert_eider__exp_combined_incremental__best.pt
+
+```bash
+# Train mbert
+bash scripts/multilingual/train_mbert.sh
+# Test mbert
+bash scripts/multilingual/test_mbert.sh
+# Train xlm-r
+bash scripts/multilingual/train_xlmr.sh
+# Test xlm-r
+bash scripts/multilingual/test_xlmr.sh
+# Train xlm-r pretrain base (w/o P241 type)
+bash scripts/multilingual/train_xlmr_pre.sh
+# Test xlm-r pretrain base
+bash scripts/multilingual/test_xlmr_pre.sh
+# Train xlm-r pretrain incremental (P241 type)
+bash scripts/multilingual/train_xlmr_inc.sh
+# Test xlm-r pretrain incremental 
+bash scripts/multilingual/test_xlmr_inc.sh
+# Test xlm-r pretrain combined ("no relation" type fusion)
+bash scripts/multilingual/test_xlmr_comb.sh
+```
+
 (Note! If you want to test on test data (any settings), you should: change "--eval_mode dev_only" to "--eval_mode test",
 pass an appropriate test data, be cautious with "saved_features" to not get confusions (and not only test time, but always) 
 and after getting the results submit it to the codalab competition presented from DocRED)
+
+## 📝 Output Tracking
+For tracking outputs run:
+```bash
+tail -f output_name.log
+```
+where ```output_name.log``` is in the last line of each script.
+
+Dev and test results after inference are provided with the datasets. Logs and individual results of each experiment are provided as well.
+```individual_results_base.json``` shows the individual result of each type in basic training (EIDER_bert_eider).
 
 ---
 
@@ -300,7 +342,7 @@ We simulate class-incremental learning through multiple data partitioning strate
 2. **Uniform Splitting:** Uniformly divide the data, removing base/incremental type overlaps.
 3. **Supplementary Annotation Simulation:** Simulate re-annotation of the same documents for new types.
 
-For more information or splitting tools please check the ```./tools``` repository.
+For more information or splitting tools please check the ```./tools``` directory.
 
 ---
 
@@ -332,6 +374,27 @@ For more information or splitting tools please check the ```./tools``` repositor
 
 
 See the paper for full experiments' descriptions.
+The models can be checked and downloaded **[here](NOT_READY_YET)**.
+
+---
+
+## 🧪 Multilingual Model Variants
+
+| Model                        | Dev F1 (%) | Encoder | Corresponding model                                        |
+|------------------------------|------------|---------|------------------------------------------------------------|
+| mrEIDER_mbert_base           | 61.03      | mBERT   | EIDER_bert_eider__exp_mbert__best.pt                   |
+| mrEIDER_xlm_base             | 61.61      | XLM-R   | EIDER_bert_eider__exp_xlm__best.pt                   |
+| mrEIDER_xlm_pretrain_pre_241 | 64.31      | XLM-R   | EIDER_bert_eider__exp_combined__best.pt           |
+| mrEIDER_xlm_pretrain_inc_241 | 75.00      | XLM-R   | EIDER_bert_eider__exp_combined_incremental__best.pt                |
+
+
+These experiments are not presented in the article.
+- mrEIDER_mbert_base: training with original settings on mBERT.
+- mrEIDER_xlm_base: training with original settings on XLM-R.
+- mrEIDER_xlm_pretrain_pre_241: pretrain on distant data (excluded P241), fine-tune on gold data (excluded P241) (trained on XLM-R)
+- mrEIDER_xlm_pretrain_inc_241: by freezing base encoder pretrain on distant data (P241 only), fine-tune on gold data (P241 only) (trained on XLM-R)
+
+
 The models can be checked and downloaded **[here](NOT_READY_YET)**.
 
 ---
