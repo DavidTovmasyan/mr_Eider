@@ -83,7 +83,7 @@ mr_Eider/
 
 We use the **original `dev.json` (1000 documents)** as our validation set (there are two versions in DocRED- 998 and 1000 docs).
 
-You can find datasets and all the required metadata **[here](NOT_READY_YET)**.
+You can find datasets and all the required metadata **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
 
 ---
 
@@ -100,7 +100,7 @@ mr_Eider/
      ├── test_coref.json
      └── (Other datasets' coreference results)
 ```
-You can find the computed coreference results **[here](NOT_READY_YET)**.
+You can find the computed coreference results **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
 
 ---
 
@@ -374,7 +374,7 @@ For more information or splitting tools please check the ```./tools``` directory
 
 
 See the paper for full experiments' descriptions.
-The models can be checked and downloaded **[here](NOT_READY_YET)**.
+The models can be checked and downloaded **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
 
 ---
 
@@ -395,7 +395,7 @@ These experiments are not presented in the article.
 - mrEIDER_xlm_pretrain_inc_241: by freezing base encoder pretrain on distant data (P241 only), fine-tune on gold data (P241 only) (trained on XLM-R)
 
 
-The models can be checked and downloaded **[here](NOT_READY_YET)**.
+The models can be checked and downloaded **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
 
 ---
 
