@@ -24,6 +24,7 @@ Most existing DocRE models assume a fixed set of relation types. In contrast, we
 
 We evaluate our approach across multiple training configurations using DocRED and RedFM datasets.
 (For dataset and coreference splitting/filtration and datasets themselves information please check ./tools)
+
 ---
 ## 🛠️ Environment Setup
 
