@@ -8,7 +8,7 @@ import copy
 import pickle
 import os
 
-dataset_path = ""
+dataset_path = "dataset/"
 rel_mode = ""
 docred_rel2id = None
 id2rel = None

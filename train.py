@@ -451,10 +451,12 @@ def main():
         parser.add_argument("--use_combined_inference", default=False, type=bool)
         parser.add_argument("--num_incr_head", type=int, default=0)
         parser.add_argument("--rel_mode", type=str, default="")
+        parser.add_argument("--data_loc_path", type=str, default=".")
+
 
     args = parser.parse_args()
     # As the dataset is not always the static docred, rel2id and data paths can vary and are passed via cli
-    evaluation.set_rel_mode(rel_value=args.rel_mode)
+    evaluation.set_rel_mode(rel_value=args.rel_mode, loc_value=args.data_loc_path)
     set_rel_mode_prepro(rel_value=args.rel_mode)
 
     device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")

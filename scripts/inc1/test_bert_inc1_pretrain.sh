@@ -29,4 +29,5 @@ nohup python3 train.py \
 --ensemble_ablation evi_rule \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_pretrain_241__best.pt \
+--data_loc_path cil \
 > output__exp_pretrain_241__test.log 2>&1

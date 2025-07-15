@@ -30,4 +30,5 @@ nohup python3 train.py \
 --load_path chkpt/EIDER_bert_eider__exp_sub6_uni_incremental__best.pt \
 --use_combined_inference true \
 --num_incr_head 7 \
+--data_loc_path cil_sub6_uni \
 > output__exp_sub6_uni_combined__test.log 2>&1

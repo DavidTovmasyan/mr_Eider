@@ -27,4 +27,5 @@ nohup python3 train.py \
 --evi_eval_mode none \
 --ensemble_mode none \
 --ensemble_ablation none \
+--data_loc_path cil \
 > output__exp_pretrain_241_.log 2>&1

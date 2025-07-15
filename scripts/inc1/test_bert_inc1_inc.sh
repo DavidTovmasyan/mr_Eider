@@ -30,4 +30,5 @@ nohup python3 train.py \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_incremental_241__best.pt \
 --add_head_test true \
+--data_loc_path cil \
 > output__exp_incremental_241__test.log 2>&1

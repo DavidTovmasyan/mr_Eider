@@ -8,15 +8,15 @@ from collections import defaultdict
 from difflib import get_close_matches
 from tqdm import tqdm
 
-dataset_path = ""
+dataset_path = "dataset/"
 rel_mode = ""
-loc_path = ""
+loc_path = "."
 rel2id = None
 id2rel = None
 
 
 # As the dataset is not always the static docred, rel2id and data paths can vary and are passed via cli
-def set_rel_mode(rel_value: str = "", dataset_value: str = "dataset/", loc_value: str = ""):
+def set_rel_mode(rel_value: str = "", dataset_value: str = "dataset/", loc_value: str = "."):
     global rel_mode, dataset_path, rel2id, id2rel, loc_path
     rel_mode = rel_value
     dataset_path = dataset_value

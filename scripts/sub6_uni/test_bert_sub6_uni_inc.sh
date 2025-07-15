@@ -16,7 +16,7 @@ nohup python3 train.py \
 --seed 66 \
 --num_class 91 \
 --num_incr_head 7 \
---rel_mode _incremental_sub6 \
+--rel_mode _uni_13 \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_bert_eider__exp_sub6_uni_incremental__test.pt \
 --ablation eider \
@@ -30,4 +30,5 @@ nohup python3 train.py \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_sub6_uni_incremental__best.pt \
 --add_head_test true \
+--data_loc_path cil_sub6_uni \
 > output__exp_sub6_uni_incremental__test.log 2>&1

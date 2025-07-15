@@ -29,4 +29,5 @@ nohup python3 train.py \
 --ensemble_ablation none \
 --load_path chkpt/EIDER_bert_eider__exp_sub6_pretrain__best.pt \
 --add_head true \
+--data_loc_path cil_sub6 \
 > output__exp_sub6_incremental_.log 2>&1

@@ -65,23 +65,24 @@ We additionally include relation types and documents from the [RedFM](https://ac
 ```
 mr_Eider/
  ├── dataset/
- │   └── docred/
- │       ├── train_annotated.json
- │       ├── train_distant.json
- │       ├── dev.json
- │       ├── test.json
- │       └── (Other base and incremental datasets created from docred)
- │
- ├── redfm/
- │   ├── redfm.json
- │   └── (Other base and incremental datasets created from redfm)
- │
- ├── meta/
- │   ├── rel2id.json
- │   └── (Other metadata)
+ │   ├── docred/
+ │   │   ├── train_annotated.json
+ │   │   ├── train_distant.json
+ │   │   ├── dev.json
+ │   │   ├── test.json
+ │   │   └── (Other base and incremental datasets created from docred)
+ │   │
+ │   ├── redfm/
+ │   │   ├── redfm.json
+ │   │   └── (Other base and incremental datasets created from redfm)
+ │   │
+ │   ├── meta/
+ │   │   ├── rel2id.json
+ │   │   └── (Other metadata)
+
 ```
 
-We use the **original `dev.json` (1000 documents)** as our validation set (there are two versions in DocRED- 998 and 1000 docs).
+We use the **`dev.json` with 998 documents** as our validation set (there are two versions in DocRED- 998 and 1000 docs).
 
 You can find datasets and all the required metadata **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
 
@@ -240,6 +241,8 @@ bash scripts/sub6_uni/test_bert_sub6_uni_inc.sh
 bash scripts/sub6_uni/test_bert_sub6_uni_comb.sh
 ```
 
+(Note! You might have to add a check in ```model.py``` line 241 for these experiments)
+
 ### Incremental DocRED + RedFM
 **Experiment(s) from the article**: 
 - REIDER Base REDFM (dev_F1 : 62.31%)
@@ -275,13 +278,13 @@ bash scripts/redfm_sub3/test_bert_redfm_sub3_inc.sh
 
 ```bash
 # Train base
-bash scripts/pretrain_roberta_redfm/train_bert_sub6_uni_pre.sh
+bash scripts/pretrain_roberta_redfm/train_roberta_pretrain.sh
 # Train incremental
-bash scripts/pretrain_roberta_redfm/train_bert_sub6_uni_inc.sh
+bash scripts/pretrain_roberta_redfm/train_roberta_pretrain_inc.sh
 # Test base
-bash scripts/pretrain_roberta_redfm/test_bert_sub6_uni_pre.sh
+bash scripts/pretrain_roberta_redfm/test_roberta_pretrain.sh
 # Test incremental
-bash scripts/pretrain_roberta_redfm/test_bert_sub6_uni_inc.sh
+bash scripts/pretrain_roberta_redfm/test_roberta_pretrain_inc.sh
 # Test combined
 # Note! In the article has been evaluated by fusing F1-s of types DocRED and RedFM
 ```
@@ -317,10 +320,12 @@ bash scripts/multilingual/test_xlmr_inc.sh
 # Test xlm-r pretrain combined ("no relation" type fusion)
 bash scripts/multilingual/test_xlmr_comb.sh
 ```
+You can run any other experiment with a multilingual model by only changing the model's name in a script.
 
 (Note! If you want to test on test data (any settings), you should: change "--eval_mode dev_only" to "--eval_mode test",
-pass an appropriate test data, be cautious with "saved_features" to not get confusions (and not only test time, but always) 
-and after getting the results submit it to the codalab competition presented from DocRED)
+pass an appropriate test data, and after getting the results submit it to the codalab competition presented from DocRED.
+
+***Be cautious with "saved_features" to not get confusions (delete it or do not use each time if you can). If getting some problem, try this first!***)
 
 ## 📝 Output Tracking
 For tracking outputs run:

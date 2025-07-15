@@ -16,7 +16,7 @@ nohup python3 train.py \
 --seed 66 \
 --num_class 91 \
 --num_incr_head 7 \
---rel_mode _pretrain_sub6 \
+--rel_mode _uni_87 \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_bert_eider__exp_sub6_uni_pretrain__best.pt \
 --ablation eider \
@@ -29,4 +29,5 @@ nohup python3 train.py \
 --ensemble_ablation evi_rule \
 --evi_pred_file evi_results_eider_bert-base-cased.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_sub6_uni_pretrain__best.pt \
+--data_loc_path cil_sub6_uni \
 > output__exp_sub6_uni_pretrain__test_.log 2>&1

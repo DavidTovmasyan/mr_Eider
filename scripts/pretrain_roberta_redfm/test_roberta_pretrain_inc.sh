@@ -16,7 +16,7 @@ nohup python3 train.py \
 --seed 66 \
 --num_class 97 \
 --num_incr_head 4 \
---rel_mode _redfm_sub3 \
+--rel_mode _redfm_incremental \
 --evaluation_steps -1 \
 --save_path chkpt/EIDER_roberta_eider_rule__exp_redfm_pre_sub3_incremental__best.pt \
 --ablation eider_rule \
@@ -30,4 +30,5 @@ nohup python3 train.py \
 --evi_pred_file evi_results_eider_rule_roberta-large.pkl \
 --load_path chkpt/EIDER_roberta_eider_rule__exp_redfm_pre_sub3_incremental__best.pt \
 --add_head_test true \
+--data_loc_path ../redfm \
 > output__exp_redfm_pre_sub3_incremental_test.log 2>&1

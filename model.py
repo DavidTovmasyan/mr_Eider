@@ -238,7 +238,7 @@ class DocREModel(nn.Module):
 
             loss = self.loss_fnt(logits.float(), labels.float())
             # 'eider'
-            if sen_labels is not None:  # and any(sen_labels) is not False: | check if "labels" is not an empty list for redfm
+            if sen_labels is not None:  # and any(sen_labels) is not False: | check if "labels" is not an empty list
                 s_labels = [torch.tensor(s_label) for s_label in sen_labels]  # sen_labels: list of 2d lists
                 s_labels = torch.cat(s_labels, dim=0).to(ss)  # [ps, max_sen_num]
                 idx_used = torch.nonzero(labels[:, 1:].sum(dim=-1)).view(-1)

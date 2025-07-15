@@ -30,4 +30,5 @@ nohup python3 train.py \
 --use_combined_inference true \
 --num_incr_head 2 \
 --rel_mode _inc1_comb \
+--data_loc_path cil \
 > output__exp_inc1_combined__test.log 2>&1
