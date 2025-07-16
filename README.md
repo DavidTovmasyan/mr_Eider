@@ -85,7 +85,7 @@ mr_Eider/
 
 We use the **`dev.json` with 998 documents** as our validation set (there are two versions in DocRED- 998 and 1000 docs).
 
-You can find datasets and all the required metadata **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
+You can find datasets and all the required metadata **[here](https://zenodo.org/records/15974082?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImM3ZmUxNGU2LTJhNzUtNDczYy05MDQwLTlhYTIyZmFmNWMyYyIsImRhdGEiOnt9LCJyYW5kb20iOiI2NjcwZDhjNDE2ZmRlN2M1Nzk2MTk4YWM0MDFhM2FlZCJ9.b_V5JiR73THHWj0J3f5O2bdtYvDkDKeOVjE1abdapSxLqZ30_V09mx7_GKaHXqVqlBxyYvM94oUWUFGgNLVRoA)**.
 
 ---
 
@@ -102,7 +102,7 @@ mr_Eider/
      ├── test_coref.json
      └── (Other datasets' coreference results)
 ```
-You can find the computed coreference results **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
+You can find the computed coreference results **[here](https://zenodo.org/records/15974082?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImM3ZmUxNGU2LTJhNzUtNDczYy05MDQwLTlhYTIyZmFmNWMyYyIsImRhdGEiOnt9LCJyYW5kb20iOiI2NjcwZDhjNDE2ZmRlN2M1Nzk2MTk4YWM0MDFhM2FlZCJ9.b_V5JiR73THHWj0J3f5O2bdtYvDkDKeOVjE1abdapSxLqZ30_V09mx7_GKaHXqVqlBxyYvM94oUWUFGgNLVRoA)**.
 
 ---
 
@@ -380,7 +380,7 @@ For more information or splitting tools please check the ```./tools``` directory
 
 
 See the paper for full experiments' descriptions.
-The models can be checked and downloaded **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
+The models can be checked and downloaded **[here](https://zenodo.org/records/15974082?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImM3ZmUxNGU2LTJhNzUtNDczYy05MDQwLTlhYTIyZmFmNWMyYyIsImRhdGEiOnt9LCJyYW5kb20iOiI2NjcwZDhjNDE2ZmRlN2M1Nzk2MTk4YWM0MDFhM2FlZCJ9.b_V5JiR73THHWj0J3f5O2bdtYvDkDKeOVjE1abdapSxLqZ30_V09mx7_GKaHXqVqlBxyYvM94oUWUFGgNLVRoA)**.
 
 ---
 
@@ -401,7 +401,7 @@ These experiments are not presented in the article.
 - mrEIDER_xlm_pretrain_inc_241: by freezing base encoder pretrain on distant data (P241 only), fine-tune on gold data (P241 only) (trained on XLM-R)
 
 
-The models can be checked and downloaded **[here](https://zenodo.org/records/15861910?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImE0NjJlODU4LTllY2UtNGYwZi05YzFmLTk5NGFjNzY2YTZmOCIsImRhdGEiOnt9LCJyYW5kb20iOiIwMjY3YTZhMWVmNDJkOTdmOWQ3MjEwY2RmZDdkNWUwNiJ9.V32Q5kbj7lKof4x4nzP6vjtjdvAOO1ib11xM7xSP8sgubXzdMbFTm6CtXqvy31Phs4B9rRLtCrJdWDaLYyZ4Ew)**.
+The models can be checked and downloaded **[here](https://zenodo.org/records/15974082?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImM3ZmUxNGU2LTJhNzUtNDczYy05MDQwLTlhYTIyZmFmNWMyYyIsImRhdGEiOnt9LCJyYW5kb20iOiI2NjcwZDhjNDE2ZmRlN2M1Nzk2MTk4YWM0MDFhM2FlZCJ9.b_V5JiR73THHWj0J3f5O2bdtYvDkDKeOVjE1abdapSxLqZ30_V09mx7_GKaHXqVqlBxyYvM94oUWUFGgNLVRoA)**.
 
 ---
 
