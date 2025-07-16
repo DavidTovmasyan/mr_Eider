@@ -30,4 +30,6 @@ nohup python3 train.py \
 --evi_pred_file evi_results_eider_xlm-roberta-base.pkl \
 --load_path chkpt/EIDER_bert_eider__exp_combined_incremental__best.pt \
 --use_combined_inference true \
+--rel_mode _inc1_comb \
+--data_loc_path cil \
 > output__exp_combined_comb__test.log 2>&1

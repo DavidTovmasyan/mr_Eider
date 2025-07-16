@@ -2,7 +2,7 @@ nohup python3 train.py \
 --data_dir ./dataset/docred \
 --transformer_type roberta \
 --model_name_or_path xlm-roberta-base \
---train_file cil/train_annotated_pretrain241.json \
+--train_file cil/train_annotated_pretrain_241.json \
 --dev_file cil/dev_pretrain_241.json \
 --test_file test.json \
 --train_batch_size 4 \
@@ -29,4 +29,5 @@ nohup python3 train.py \
 --ensemble_ablation none \
 --do_pretrain true \
 --silver_data_file cil/train_distant_pretrain_241.json \
+--data_loc_path cil \
 > output__exp_combined_.log 2>&1

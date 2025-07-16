@@ -1,7 +1,7 @@
 nohup python3 train.py \
 --data_dir ./dataset/docred \
 --transformer_type bert \
---model_name_or_path bert-base-multilingual \
+--model_name_or_path bert-base-multilingual-cased \
 --train_file train_annotated.json \
 --dev_file dev.json \
 --test_file test.json \
